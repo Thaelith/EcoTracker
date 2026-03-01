@@ -1,11 +1,11 @@
-# 🌿 Eco-Scanner & Tracker
+# Eco-Scanner & Tracker
 
 A modern Android application to scan product barcodes and track your environmental impact.  
 Built with **Kotlin**, **Material Design 3**, and **MVVM Architecture**.
 
 ---
 
-## 📱 Screenshots Overview
+## Screenshots Overview
 
 | Scan | History | Statistics |
 |------|---------|------------|
@@ -13,7 +13,7 @@ Built with **Kotlin**, **Material Design 3**, and **MVVM Architecture**.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 MVVM (Model–View–ViewModel)
@@ -64,7 +64,7 @@ com.ecoscanner/
 
 ---
 
-## 🔧 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -81,7 +81,7 @@ com.ecoscanner/
 
 ---
 
-## 📦 Key Dependencies (`app/build.gradle`)
+## Key Dependencies (`app/build.gradle`)
 
 ```groovy
 // Navigation
@@ -111,7 +111,7 @@ implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Android Studio Hedgehog (2023.1.1) or newer
@@ -136,7 +136,7 @@ implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 
 ---
 
-## 🌍 API: Open Food Facts
+## API: Open Food Facts
 
 - **Base URL:** `https://world.openfoodfacts.org/`
 - **Endpoint:** `GET /api/v2/product/{barcode}.json`
@@ -150,7 +150,7 @@ implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 
 ---
 
-## 🗄️ Room Database Schema
+## Room Database Schema
 
 ### Table: `scanned_products`
 
@@ -169,7 +169,7 @@ implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 
 ---
 
-## 🌱 Carbon Footprint Calculation
+## Carbon Footprint Calculation
 
 Currently uses a **mock** value based on:
 1. Real `agribalyse.co2_total` from Open Food Facts (if available)
@@ -183,7 +183,7 @@ Currently uses a **mock** value based on:
 
 ---
 
-## 📋 Navigation
+## Navigation
 
 ```
 MainActivity
@@ -197,31 +197,29 @@ Bottom Navigation uses `setupWithNavController()` for automatic back-stack and i
 
 ---
 
-## ✅ Features Checklist
+## Future Enhancements
 
-- [x] MVVM architecture with Hilt DI
-- [x] Room database with Flow reactive queries
-- [x] Retrofit + Open Food Facts API integration
-- [x] ZXing barcode scanning
-- [x] Navigation Component + Bottom Navigation
-- [x] Material Design 3 theming (green eco theme)
-- [x] Product result card with eco-score badge
-- [x] History list with swipe-to-delete
-- [x] Statistics bar chart (MPAndroidChart)
-- [x] Daily & weekly carbon totals
-- [x] Kotlin Coroutines + Flow throughout
-
-### 🔮 Future Enhancements
-- [ ] CameraX real-time barcode scanning (replace ZXing)
-- [ ] Product image loading with Glide
-- [ ] Eco-score explanation dialog
-- [ ] Export history to CSV
-- [ ] Push notifications for weekly summary
-- [ ] Dark mode optimisation
-- [ ] Unit & integration tests
+- MVVM architecture with Hilt DI
+- Room database with Flow reactive queries
+- Retrofit + Open Food Facts API integration
+- ZXing barcode scanning
+- Navigation Component + Bottom Navigation
+- Material Design 3 theming (green eco theme)
+- Product result card with eco-score badge
+- History list with swipe-to-delete
+- Statistics bar chart (MPAndroidChart)
+- Daily & weekly carbon totals
+- Kotlin Coroutines + Flow throughout
+- CameraX real-time barcode scanning (replace ZXing)
+- Product image loading with Glide
+- Eco-score explanation dialog
+- Export history to CSV
+- Push notifications for weekly summary
+- Dark mode optimisation
+- Unit & integration tests
 
 ---
 
-## 📄 License
+## License
 
 MIT — free to use and modify.
