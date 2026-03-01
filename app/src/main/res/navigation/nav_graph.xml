@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/scanFragment">
+
+    <fragment
+        android:id="@+id/scanFragment"
+        android:name="com.ecotracker.ui.scan.ScanFragment"
+        android:label="@string/title_scan" >
+        <action
+            android:id="@+id/action_scanFragment_to_manualEntryFragment"
+            app:destination="@id/manualEntryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/historyFragment"
+        android:name="com.ecotracker.ui.history.HistoryFragment"
+        android:label="@string/title_history" />
+
+    <fragment
+        android:id="@+id/statisticsFragment"
+        android:name="com.ecotracker.ui.statistics.StatisticsFragment"
+        android:label="@string/title_statistics" />
+
+    <fragment
+        android:id="@+id/manualEntryFragment"
+        android:name="com.ecotracker.ui.manual.ManualEntryFragment"
+        android:label="Manual Product Entry"
+        tools:layout="@layout/fragment_manual_entry" >
+        <argument
+            android:name="barcode"
+            app:argType="string" />
+    </fragment>
+
+</navigation>

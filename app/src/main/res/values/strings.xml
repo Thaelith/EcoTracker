@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Eco-Scanner</string>
+
+    <!-- Navigation labels -->
+    <string name="title_scan">Scan</string>
+    <string name="title_history">History</string>
+    <string name="title_statistics">Statistics</string>
+
+    <!-- Scan screen -->
+    <string name="scan_hint">Tap the button to scan a barcode</string>
+    <string name="btn_scan">Scan Barcode</string>
+    <string name="btn_save">Save to History</string>
+    <string name="btn_scan_again">Scan Again</string>
+
+    <!-- History screen -->
+    <string name="history_empty_title">No scans yet</string>
+    <string name="history_empty_subtitle">Start scanning products to track your environmental impact</string>
+
+    <!-- Statistics screen -->
+    <string name="label_today">Today</string>
+    <string name="label_week">This Week</string>
+    <string name="label_total_scans">Total Products Scanned</string>
+    <string name="chart_title">Daily Carbon Footprint (last 7 days)</string>
+
+    <!-- Labels -->
+    <string name="label_carbon">Carbon Footprint</string>
+    <string name="label_eco_score">Eco-Score</string>
+</resources>

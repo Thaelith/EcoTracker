@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.EcoTracker" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/md_theme_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_on_primary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_on_primary_container</item>
+
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/md_theme_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_on_secondary</item>
+
+        <!-- Surface -->
+        <item name="colorSurface">@color/md_theme_surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_surface_variant</item>
+
+        <!-- Background -->
+        <item name="android:colorBackground">@color/background</item>
+
+        <!-- Window -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/md_theme_primary</item>
+    </style>
+</resources>

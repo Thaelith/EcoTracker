@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material Design 3 - Green eco theme -->
+    <color name="md_theme_primary">#2E7D32</color>
+    <color name="md_theme_on_primary">#FFFFFF</color>
+    <color name="md_theme_primary_container">#B8F0B9</color>
+    <color name="md_theme_on_primary_container">#002107</color>
+
+    <color name="md_theme_secondary">#52634F</color>
+    <color name="md_theme_on_secondary">#FFFFFF</color>
+
+    <color name="md_theme_surface">#FCFDF6</color>
+    <color name="md_theme_surface_variant">#DEE5D9</color>
+
+    <color name="on_surface">#1A1C19</color>
+    <color name="on_surface_variant">#424940</color>
+
+    <color name="background">#F4F6F0</color>
+
+    <!-- Eco score colours -->
+    <color name="eco_score_a">#1a9850</color>
+    <color name="eco_score_b">#91cf60</color>
+    <color name="eco_score_c">#fee08b</color>
+    <color name="eco_score_d">#fc8d59</color>
+    <color name="eco_score_e">#d73027</color>
+    <color name="eco_score_na">#9e9e9e</color>
+
+    <color name="eco_green">#388E3C</color>
+
+    <!-- Bottom nav selector -->
+    <color name="bottom_nav_selected">@color/md_theme_primary</color>
+    <color name="bottom_nav_unselected">#757575</color>
+</resources>
