@@ -10,6 +10,9 @@ import com.ecotracker.utils.toScannedProduct
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 
 @Singleton
 class EcoTrackerRepository @Inject constructor(
@@ -71,7 +74,31 @@ class EcoTrackerRepository @Inject constructor(
 
     // ── Local ─────────────────────────────────────────────────────────────────
 
-    suspend fun saveProduct(product: ScannedProduct): Long = dao.insertProduct(product)
+    suspend fun saveProduct(product: ScannedProduct): Long {
+        val id = dao.insertProduct(product)
+        
+        // Sync with Firestore if logged in
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            
+            val scanData = hashMapOf(
+                "barcode" to product.barcode,
+                "productName" to product.productName,
+                "carbonFootprint" to product.carbonFootprint,
+                "timestamp" to product.timestamp
+            )
+            
+            db.collection("users").document(user.uid)
+                .collection("scans").add(scanData)
+                
+            if (product.carbonFootprint > 0.0) {
+                db.collection("users").document(user.uid)
+                    .update("co2e", FieldValue.increment(product.carbonFootprint))
+            }
+        }
+        return id
+    }
 
     suspend fun deleteProduct(product: ScannedProduct) = dao.deleteProduct(product)
 

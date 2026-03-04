@@ -19,7 +19,7 @@ Built with **Kotlin**, **Material Design 3**, and **MVVM Architecture**.
 MVVM (Model–View–ViewModel)
 ├── View   → Fragments (observe LiveData, dispatch events)
 ├── VM     → ViewModels (business logic, LiveData)
-└── Model  → Repository → [Room DB | Retrofit API]
+└── Model  → Repository → [Room DB | Firestore | Retrofit API]
 ```
 
 ### Package Structure
@@ -72,7 +72,8 @@ com.ecoscanner/
 | UI | Material Design 3, ViewBinding |
 | Navigation | Navigation Component |
 | DI | Hilt 2.48 |
-| Database | Room 2.6 |
+| Database | Room 2.6, Firebase Firestore |
+| Authentication | Firebase Authentication |
 | Networking | Retrofit 2 + OkHttp 4 |
 | Async | Kotlin Coroutines + Flow |
 | Barcode | ZXing Android Embedded |
@@ -102,6 +103,11 @@ implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
 // MPAndroidChart
 implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+
+// Firebase
+implementation platform('com.google.firebase:firebase-bom:32.7.2')
+implementation 'com.google.firebase:firebase-auth'
+implementation 'com.google.firebase:firebase-firestore'
 ```
 
 > **Note:** MPAndroidChart requires JitPack in `settings.gradle`:
@@ -132,7 +138,8 @@ implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
        }
    }
    ```
-4. **Run** on emulator or physical device (API 24+)
+4. **Add Google Services**: Ensure your Firebase `google-services.json` is placed in the `app/` directory.
+5. **Run** on emulator or physical device (API 24+)
 
 ---
 
@@ -197,26 +204,30 @@ Bottom Navigation uses `setupWithNavController()` for automatic back-stack and i
 
 ---
 
-## Future Enhancements
+## Features Checklist
 
-- MVVM architecture with Hilt DI
-- Room database with Flow reactive queries
-- Retrofit + Open Food Facts API integration
-- ZXing barcode scanning
-- Navigation Component + Bottom Navigation
-- Material Design 3 theming (green eco theme)
-- Product result card with eco-score badge
-- History list with swipe-to-delete
-- Statistics bar chart (MPAndroidChart)
-- Daily & weekly carbon totals
-- Kotlin Coroutines + Flow throughout
-- CameraX real-time barcode scanning (replace ZXing)
-- Product image loading with Glide
-- Eco-score explanation dialog
-- Export history to CSV
-- Push notifications for weekly summary
-- Dark mode optimisation
-- Unit & integration tests
+- [x] MVVM architecture with Hilt DI
+- [x] Room database with Flow reactive queries
+- [x] Firebase Authentication (email/password login and registration)
+- [x] Firebase Firestore (user profiles and cloud data sync)
+- [x] Retrofit + Open Food Facts API integration
+- [x] ZXing barcode scanning
+- [x] Navigation Component + Bottom Navigation
+- [x] Material Design 3 theming (green eco theme)
+- [x] Product result card with eco-score badge
+- [x] History list with swipe-to-delete
+- [x] Statistics bar chart (MPAndroidChart)
+- [x] Daily & weekly carbon totals
+- [x] Kotlin Coroutines + Flow throughout
+
+### Future Enhancements
+- [ ] CameraX real-time barcode scanning (replace ZXing)
+- [ ] Product image loading with Glide
+- [ ] Eco-score explanation dialog
+- [ ] Export history to CSV
+- [ ] Push notifications for weekly summary
+- [ ] Dark mode optimisation
+- [ ] Unit & integration tests
 
 ---
 

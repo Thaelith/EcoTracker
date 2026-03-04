@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/scanFragment"
+            android:icon="@drawable/ic_barcode_scan"
+            android:title="@string/title_scan" />
+        <item
+            android:id="@+id/historyFragment"
+            android:icon="@drawable/ic_history"
+            android:title="@string/title_history" />
+        <item
+            android:id="@+id/statisticsFragment"
+            android:icon="@drawable/ic_stats"
+            android:title="@string/title_statistics" />
+        <item
+            android:id="@+id/leaderboardFragment"
+            android:icon="@drawable/ic_leaderboard"
+            android:title="Leaderboard" />
+        <item
+            android:id="@+id/questsFragment"
+            android:icon="@drawable/ic_quests"
+            android:title="Quests" />
+    </group>
+
+    <item android:title="Account">
+        <menu>
+            <item
+                android:id="@+id/profileFragment"
+                android:icon="@drawable/ic_profile"
+                android:title="Profile" />
+        </menu>
+    </item>
+
+    <group android:id="@+id/drawer_actions">
+        <item
+            android:id="@+id/action_logout"
+            android:icon="@drawable/ic_logout"
+            android:title="Logout" />
+    </group>
+</menu>

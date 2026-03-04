@@ -35,4 +35,22 @@
             app:argType="string" />
     </fragment>
 
+    <fragment
+        android:id="@+id/leaderboardFragment"
+        android:name="com.ecotracker.ui.leaderboard.LeaderboardFragment"
+        android:label="Leaderboard"
+        tools:layout="@layout/fragment_leaderboard" />
+
+    <fragment
+        android:id="@+id/questsFragment"
+        android:name="com.ecotracker.ui.quests.QuestsFragment"
+        android:label="Quests"
+        tools:layout="@layout/fragment_quests" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.ecotracker.ui.profile.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile" />
+
 </navigation>
