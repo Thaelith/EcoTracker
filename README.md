@@ -1,4 +1,4 @@
-# Eco-Scanner & Tracker
+# Eco-Scanner & Tracker 
 
 A modern Android application to scan product barcodes and track your environmental impact.  
 Built with **Kotlin**, **Material Design 3**, and **MVVM Architecture**.
