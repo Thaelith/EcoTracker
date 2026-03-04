@@ -25,36 +25,33 @@ MVVM (Model–View–ViewModel)
 ### Package Structure
 
 ```
-com.ecoscanner/
-├── EcoScannerApp.kt           ← Hilt application class
+com.ecotracker/
+├── EcoTrackerApp.kt           ← Hilt application class
 │
 ├── data/
 │   ├── local/
 │   │   ├── ScannedProduct.kt  ← Room @Entity
 │   │   ├── ScannedProductDao.kt
-│   │   └── EcoScannerDatabase.kt
+│   │   └── EcoTrackerDatabase.kt
 │   ├── remote/
 │   │   ├── OpenFoodFactsApiService.kt   ← Retrofit interface
 │   │   └── OpenFoodFactsModels.kt       ← Response DTOs
 │   └── repository/
-│       └── EcoScannerRepository.kt      ← Single source of truth
+│       └── EcoTrackerRepository.kt      ← Single source of truth
 │
 ├── di/
 │   └── AppModule.kt           ← Hilt @Module (DB + Retrofit)
 │
 ├── ui/
-│   ├── main/
-│   │   └── MainActivity.kt    ← NavController + BottomNav
-│   ├── scan/
-│   │   ├── ScanFragment.kt
-│   │   └── ScanViewModel.kt
+│   ├── auth/                  ← Firebase Login / Register
 │   ├── history/
-│   │   ├── HistoryFragment.kt
-│   │   ├── HistoryViewModel.kt
-│   │   └── ProductHistoryAdapter.kt
+│   ├── leaderboard/           ← Gamification leaderboard
+│   ├── main/                  ← MainActivity + BottomNav
+│   ├── manual/                ← Manual entry
+│   ├── profile/               ← User profile & Leveling System
+│   ├── quests/                ← Gamification quests
+│   ├── scan/
 │   └── statistics/
-│       ├── StatisticsFragment.kt
-│       └── StatisticsViewModel.kt
 │
 └── utils/
     ├── Resource.kt            ← Sealed class for UI state
@@ -196,8 +193,12 @@ Currently uses a **mock** value based on:
 MainActivity
 └── NavHostFragment (nav_graph.xml)
     ├── ScanFragment      (startDestination)
+    │   └── ManualEntryFragment
     ├── HistoryFragment
-    └── StatisticsFragment
+    ├── StatisticsFragment
+    ├── LeaderboardFragment
+    ├── QuestsFragment
+    └── ProfileFragment
 ```
 
 Bottom Navigation uses `setupWithNavController()` for automatic back-stack and icon highlighting.
@@ -219,6 +220,9 @@ Bottom Navigation uses `setupWithNavController()` for automatic back-stack and i
 - [x] Statistics bar chart (MPAndroidChart)
 - [x] Daily & weekly carbon totals
 - [x] Kotlin Coroutines + Flow throughout
+- [x] Gamification Engine (Leveling System, Quests, Leaderboard)
+- [x] Manual Product Entry
+- [x] User Profiles
 
 ### Future Enhancements
 - [ ] CameraX real-time barcode scanning (replace ZXing)
