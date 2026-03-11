@@ -121,24 +121,6 @@ implementation 'com.google.firebase:firebase-firestore'
 - JDK 17
 - Android SDK 24+
 
-### Setup Steps
-
-1. **Clone / open** the project in Android Studio
-2. **Sync** Gradle (`File → Sync Project with Gradle Files`)
-3. **Add JitPack** to `settings.gradle` for MPAndroidChart:
-   ```groovy
-   dependencyResolutionManagement {
-       repositories {
-           google()
-           mavenCentral()
-           maven { url 'https://jitpack.io' }   // ← add this
-       }
-   }
-   ```
-4. **Add Google Services**: Ensure your Firebase `google-services.json` is placed in the `app/` directory.
-5. **Run** on emulator or physical device (API 24+)
-
----
 
 ## API: Open Food Facts
 
