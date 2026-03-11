@@ -68,3 +68,7 @@ com.ecotracker/
 - **Open Food Facts API:** Used to retrieve product data (eco-score, carbon footprint, brand) using a barcode. It is free and requires no API key.
 - **Firebase Authentication:** Manages user registration and login.
 - **Firebase Firestore:** Syncs user profiles, experience points, and history to the cloud.
+
+## Purpose
+
+This project was developed as a university software engineering project to explore Android development, API integration, and cloud-based data storage while raising awareness about environmental impact in consumer products.
