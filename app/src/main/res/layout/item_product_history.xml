@@ -92,7 +92,7 @@
             android:layout_height="36dp"
             android:src="@drawable/ic_delete"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/on_surface_variant"
+            app:tint="@color/on_surface_variant"
             android:contentDescription="Delete item"
             android:layout_marginStart="8dp" />
 

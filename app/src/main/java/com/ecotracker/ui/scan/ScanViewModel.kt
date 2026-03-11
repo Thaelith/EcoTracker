@@ -62,7 +62,6 @@ class ScanViewModel @Inject constructor(
     }
 
     fun resetState() {
-        _scanState.value = null
         _savedState.value = false
         _showManualEntry.value = null
     }
