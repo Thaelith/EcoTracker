@@ -16,6 +16,6 @@ interface OpenFoodFactsApiService {
     ): Response<OpenFoodFactsResponse>
 
     companion object {
-        const val BASE_URL = "https://tr.openfoodfacts.org/"
+        const val BASE_URL = "https://world.openfoodfacts.org/"
     }
 }

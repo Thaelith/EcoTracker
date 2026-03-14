@@ -174,7 +174,64 @@
                     android:text="—"
                     android:textSize="12sp"
                     android:textColor="@color/on_surface_variant"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Analysis Section -->
+                <LinearLayout
+                    android:id="@+id/analysisSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:background="@drawable/ai_info_background"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="4dp">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_ai_stars"
+                            android:layout_marginEnd="6dp"
+                            app:tint="@color/md_theme_primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="AI Environmental Analysis"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/md_theme_primary" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tvConfidence"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="High Confidence"
+                            android:textSize="10sp"
+                            android:textColor="@color/on_surface_variant" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvReasoning"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Reasoning goes here..."
+                        android:textSize="12sp"
+                        android:textColor="@color/on_surface"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
 
                 <!-- Action buttons -->
                 <LinearLayout

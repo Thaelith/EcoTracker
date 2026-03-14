@@ -32,4 +32,7 @@ interface ScannedProductDao {
 
     @Query("SELECT * FROM scanned_products WHERE barcode = :barcode LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): ScannedProduct?
+
+    @Query("DELETE FROM scanned_products")
+    suspend fun deleteAll()
 }

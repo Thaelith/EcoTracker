@@ -9,6 +9,7 @@ import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.databinding.ItemProductHistoryBinding
 import com.ecotracker.utils.CarbonCalculator
 import com.ecotracker.utils.ecoScoreColor
+import com.ecotracker.utils.toColorGradient
 import com.ecotracker.utils.toFormattedDate
 
 class ProductHistoryAdapter(
@@ -41,6 +42,7 @@ class ProductHistoryAdapter(
                 tvEcoScore.text = product.ecoScore
                 tvEcoScore.setBackgroundColor(product.ecoScore.ecoScoreColor())
                 tvCarbon.text = CarbonCalculator.format(product.carbonFootprint)
+                tvCarbon.setTextColor(product.carbonFootprint.toColorGradient())
                 tvDate.text = product.timestamp.toFormattedDate()
 
                 root.setOnClickListener { onItemClick(product) }

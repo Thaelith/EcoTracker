@@ -1,8 +1,10 @@
 package com.ecotracker.utils
 
 import android.content.Context
+import android.graphics.Color
 import android.view.View
 import android.widget.Toast
+import androidx.core.graphics.ColorUtils
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.remote.ProductDto
 import com.google.android.material.snackbar.Snackbar
@@ -67,10 +69,28 @@ fun ProductDto.toScannedProduct(barcode: String): ScannedProduct {
 // ── EcoScore color helper ─────────────────────────────────────────────────────
 
 fun String.ecoScoreColor(): Int = when (this.uppercase()) {
-    "A"  -> android.graphics.Color.parseColor("#1a9850")
-    "B"  -> android.graphics.Color.parseColor("#91cf60")
-    "C"  -> android.graphics.Color.parseColor("#fee08b")
-    "D"  -> android.graphics.Color.parseColor("#fc8d59")
-    "E"  -> android.graphics.Color.parseColor("#d73027")
-    else -> android.graphics.Color.parseColor("#9e9e9e")
+    "A"  -> Color.parseColor("#1a9850") // Green
+    "B"  -> Color.parseColor("#91cf60") // Light green
+    "C"  -> Color.parseColor("#fee08b") // Yellow
+    "D"  -> Color.parseColor("#fc8d59") // Orange
+    "E"  -> Color.parseColor("#d73027") // Red
+    else -> Color.parseColor("#9e9e9e") // Grey
+}
+
+// ── Carbon Footprint gradient helper ──────────────────────────────────────────
+
+/**
+ * Maps a CO2e value (kg) to a color gradient interpolating from Green (0) to Yellow (3.0) to Red (11.0+).
+ */
+fun Double.toColorGradient(): Int {
+    val green = Color.parseColor("#1a9850")  // 0.0
+    val yellow = Color.parseColor("#ffd54f") // ~3.0
+    val red = Color.parseColor("#d73027")    // >= 11.0
+
+    return when {
+        this <= 0.0 -> green
+        this < 3.0 -> ColorUtils.blendARGB(green, yellow, (this / 3.0).toFloat())
+        this < 11.0 -> ColorUtils.blendARGB(yellow, red, ((this - 3.0) / 8.0).toFloat())
+        else -> red
+    }
 }

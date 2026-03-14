@@ -18,6 +18,7 @@ import com.ecotracker.utils.gone
 import com.ecotracker.utils.toast
 import com.ecotracker.utils.visible
 import com.ecotracker.utils.ecoScoreColor
+import com.ecotracker.utils.toColorGradient
 import com.ecotracker.utils.CarbonCalculator
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanIntentResult
@@ -98,13 +99,16 @@ class ScanFragment : Fragment() {
                     showLoading(false)
                     requireContext().toast(state.message)
                 }
+                is Resource.NeedsInput -> {
+                    showLoading(false)
+                }
                 null -> { /* idle */ }
             }
         }
 
         viewModel.savedState.observe(viewLifecycleOwner) { saved ->
             if (saved == true) {
-                requireContext().toast("✅ Product saved to history!")
+                requireContext().toast("Product saved to history!")
                 viewModel.onProductSavedToastShown()
             }
         }
@@ -116,6 +120,36 @@ class ScanFragment : Fragment() {
                 viewModel.onManualEntryNavigated()
             }
         }
+
+        viewModel.showInputPrompt.observe(viewLifecycleOwner) { barcode ->
+            if (barcode != null) {
+                showProductHintDialog(barcode)
+                viewModel.onInputPromptShown()
+            }
+        }
+    }
+
+    private fun showProductHintDialog(barcode: String) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_product_hint, null)
+        val etHint = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etProductHint)
+        
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Product Not Found")
+            .setIcon(R.drawable.ic_ai_stars)
+            .setView(dialogView)
+            .setPositiveButton("Search with AI") { _, _ ->
+                val hintText = etHint.text.toString().trim()
+                if (hintText.isNotEmpty()) {
+                    viewModel.estimateWithUserInput(barcode, hintText)
+                } else {
+                    requireContext().toast("Hint cannot be empty.")
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+
+        // Auto-show keyboard
+        etHint.requestFocus()
     }
 
     // ── Scanning ──────────────────────────────────────────────────────────────
@@ -153,8 +187,18 @@ class ScanFragment : Fragment() {
             tvEcoScore.text     = product.ecoScore
             tvEcoScore.setBackgroundColor(product.ecoScore.ecoScoreColor())
             tvCarbon.text       = CarbonCalculator.format(product.carbonFootprint)
+            tvCarbon.setTextColor(product.carbonFootprint.toColorGradient())
             tvCategories.text   = if (product.categories.isNotBlank())
                 product.categories.take(80) else "—"
+
+            // Show Analysis if available
+            if (!product.aiReasoning.isNullOrBlank()) {
+                analysisSection.visible()
+                tvReasoning.text = product.aiReasoning
+                tvConfidence.text = "Confidence: ${product.aiConfidence ?: "Unknown"}"
+            } else {
+                analysisSection.gone()
+            }
         }
     }
 }

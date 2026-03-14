@@ -25,6 +25,9 @@ class ScanViewModel @Inject constructor(
     private val _showManualEntry = MutableLiveData<String?>()
     val showManualEntry: LiveData<String?> = _showManualEntry
 
+    private val _showInputPrompt = MutableLiveData<String?>()
+    val showInputPrompt: LiveData<String?> = _showInputPrompt
+
     fun lookupBarcode(barcode: String) {
         _scanState.value = Resource.Loading
         viewModelScope.launch {
@@ -35,6 +38,9 @@ class ScanViewModel @Inject constructor(
             }
 
             when (val result = repository.fetchProductByBarcode(barcode)) {
+                is Resource.NeedsInput -> {
+                    _showInputPrompt.postValue(result.barcode)
+                }
                 is Resource.Error -> {
                     if (result.data is String) { // Barcode is in the data field
                         _showManualEntry.postValue(result.data)
@@ -43,6 +49,14 @@ class ScanViewModel @Inject constructor(
                 }
                 else -> _scanState.postValue(result)
             }
+        }
+    }
+
+    fun estimateWithUserInput(barcode: String, userHint: String) {
+        _scanState.value = Resource.Loading
+        viewModelScope.launch {
+            val result = repository.estimateWithUserPrompt(barcode, userHint)
+            _scanState.postValue(result)
         }
     }
 
@@ -57,6 +71,10 @@ class ScanViewModel @Inject constructor(
         _showManualEntry.value = null
     }
 
+    fun onInputPromptShown() {
+        _showInputPrompt.value = null
+    }
+
     fun onProductSavedToastShown() {
         _savedState.value = false
     }
@@ -64,5 +82,6 @@ class ScanViewModel @Inject constructor(
     fun resetState() {
         _savedState.value = false
         _showManualEntry.value = null
+        _showInputPrompt.value = null
     }
 }

@@ -24,9 +24,11 @@ data class ProductDto(
     @SerializedName("ecoscore_score")              val ecoScoreScore: Int?,
     @SerializedName("ecoscore_data")               val ecoScoreData: EcoScoreDataDto?,
     @SerializedName("nutriments")                  val nutriments: NutrimentsDto?,
+    @SerializedName("product_quantity")            val productQuantity: Double?,
     @SerializedName("packaging")                   val packaging: String?,
     @SerializedName("origins")                     val origins: String?,
-    @SerializedName("manufacturing_places")        val manufacturingPlaces: String?
+    @SerializedName("manufacturing_places")        val manufacturingPlaces: String?,
+    @SerializedName("quantity")                     val quantity: String?
 )
 
 // ── EcoScore data ─────────────────────────────────────────────────────────────

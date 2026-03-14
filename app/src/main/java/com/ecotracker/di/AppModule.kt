@@ -34,8 +34,8 @@ object AppModule {
                     level = HttpLoggingInterceptor.Level.BODY
                 }
             )
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("User-Agent", "EcoTracker/1.0 (Android)")
@@ -83,7 +83,7 @@ object AppModule {
             context,
             EcoTrackerDatabase::class.java,
             EcoTrackerDatabase.DATABASE_NAME
-        ).build()
+        ).fallbackToDestructiveMigration().build()
 
     @Provides
     @Singleton

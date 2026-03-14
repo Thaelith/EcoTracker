@@ -18,5 +18,8 @@ data class ScannedProduct(
     val ecoScore: String,
     val ecoScoreValue: Int,
     val carbonFootprint: Double,
+    val aiReasoning: String? = null,
+    val aiConfidence: String? = null,
+    val aiDataQuality: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable
