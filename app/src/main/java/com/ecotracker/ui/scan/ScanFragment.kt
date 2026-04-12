@@ -19,6 +19,7 @@ import com.ecotracker.utils.toast
 import com.ecotracker.utils.visible
 import com.ecotracker.utils.ecoScoreColor
 import com.ecotracker.utils.toColorGradient
+import com.ecotracker.utils.toColor
 import com.ecotracker.utils.CarbonCalculator
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanIntentResult
@@ -188,6 +189,11 @@ class ScanFragment : Fragment() {
             tvEcoScore.setBackgroundColor(product.ecoScore.ecoScoreColor())
             tvCarbon.text       = CarbonCalculator.format(product.carbonFootprint)
             tvCarbon.setTextColor(product.carbonFootprint.toColorGradient())
+            
+            // Update Status Badge
+            tvStatus.text = product.status.name.replace("_", " ")
+            tvStatus.background.setTint(product.status.toColor())
+
             tvCategories.text   = if (product.categories.isNotBlank())
                 product.categories.take(80) else "—"
 

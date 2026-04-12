@@ -14,13 +14,9 @@
             android:icon="@drawable/ic_stats"
             android:title="@string/title_statistics" />
         <item
-            android:id="@+id/leaderboardFragment"
-            android:icon="@drawable/ic_leaderboard"
-            android:title="Leaderboard" />
-        <item
-            android:id="@+id/questsFragment"
+            android:id="@+id/achievementsFragment"
             android:icon="@drawable/ic_quests"
-            android:title="Quests" />
+            android:title="Achievements" />
     </group>
 
     <item android:title="Account">

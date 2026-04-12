@@ -8,7 +8,8 @@ EcoTracker is an Android application built to help users scan product barcodes a
 - **User-Assisted Identification:** An interactive fallback mechanism allowing users to provide product descriptions to guide the AI when a barcode is not found in structured databases.
 - **Environmental Impact Statistics:** Comprehensive tracking of daily and weekly carbon footprint totals, visualized through interactive analytical charts.
 - **Product History:** Local persistence of scanned items with cross-device cloud synchronization.
-- **Gamification System:** Engagement features including experience points (XP), leveling, specialized quests, and a global community leaderboard.
+- **Gamification System:** Engagement features including nature-themed eco-ranks (Seedling to Forest Guardian), milestone badges, and performance accomplishments.
+- **Product Comparison:** Easily compare the carbon footprint of multiple products to make actively eco-friendly choices.
 - **Secure Authentication:** Firebase-powered authentication for data persistence and secure user profiles.
 
 ## Technologies Used
@@ -37,7 +38,9 @@ com.ecotracker/
 │   └── repository/     # Centralized data access with discovery waterfall logic
 ├── di/                 # Dagger Hilt module configurations
 ├── ui/
+│   ├── achievements/   # Achievement badges and gamification unlocking UI
 │   ├── auth/           # Login and registration fragments
+│   ├── comparison/     # Carbon footprint product comparison UI
 │   ├── history/        # Scanned product history list
 │   ├── leaderboard/    # Global user rankings
 │   ├── main/           # MainActivity and navigation setup

@@ -85,6 +85,17 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Compare button -->
+        <ImageButton
+            android:id="@+id/btnCompare"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_compare"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/on_surface_variant"
+            android:contentDescription="Add to comparison"
+            android:layout_marginStart="8dp" />
+
         <!-- Delete button -->
         <ImageButton
             android:id="@+id/btnDelete"

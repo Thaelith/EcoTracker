@@ -49,37 +49,71 @@
             <ImageView
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:src="@drawable/ic_leaderboard"
-                app:tint="?attr/colorPrimary"
+                android:src="@drawable/ic_quests"
+                app:tint="@color/eco_green"
                 android:layout_marginBottom="8dp"/>
 
             <TextView
-                android:id="@+id/tvLevel"
+                android:id="@+id/tvRankName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Level 3: Eco-Warrior"
+                android:text="Seedling"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:textColor="?attr/colorPrimary"/>
+                android:textColor="@color/eco_green"/>
+
+            <TextView
+                android:id="@+id/tvRankLevel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Eco Rank"
+                android:textSize="12sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:textColor="@color/on_surface_variant"
+                android:layout_marginBottom="12dp"/>
                 
             <ProgressBar
-                android:id="@+id/pbXp"
+                android:id="@+id/pbRankProgress"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:progress="50"
+                android:progress="0"
                 android:max="100" />
                 
             <TextView
-                android:id="@+id/tvXpProgress"
+                android:id="@+id/tvScanCountProgress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="250 / 500 XP"
+                android:text="0 scans"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp" />
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Recent Achievements"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="12dp"
+        android:textColor="@color/on_surface"/>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/layoutBadgesPreview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <!-- Badges will be added dynamically -->
+        </LinearLayout>
+    </HorizontalScrollView>
 
 </LinearLayout>

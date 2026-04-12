@@ -4,24 +4,41 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import android.widget.ImageView
+import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.ecotracker.R
+import com.ecotracker.data.repository.EcoTrackerRepository
+import com.ecotracker.databinding.FragmentProfileBinding
+import com.ecotracker.utils.GamificationEngine
+import com.ecotracker.utils.gone
+import com.ecotracker.utils.visible
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ProfileFragment : Fragment() {
+
+    private var _binding: FragmentProfileBinding? = null
+    private val binding get() = _binding!!
+
+    @Inject
+    lateinit var repository: EcoTrackerRepository
 
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_profile, container, false)
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentProfileBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -29,23 +46,69 @@ class ProfileFragment : Fragment() {
         auth = FirebaseAuth.getInstance()
         firestore = FirebaseFirestore.getInstance()
 
-        val tvUsername = view.findViewById<TextView>(R.id.tvUsername)
-        val tvEmail = view.findViewById<TextView>(R.id.tvEmail)
-        
+        setupUserData()
+        observeGamification()
+    }
+
+    private fun setupUserData() {
         val user = auth.currentUser
         if (user != null) {
-            tvEmail.text = user.email
+            binding.tvEmail.text = user.email
 
-            // Fetch username from Firestore
             firestore.collection("users").document(user.uid).get()
                 .addOnSuccessListener { document ->
                     if (document != null && document.exists()) {
                         val username = document.getString("username")
                         if (username != null) {
-                            tvUsername.text = username
+                            binding.tvUsername.text = username
                         }
                     }
                 }
         }
+    }
+
+    private fun observeGamification() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repository.getAllProducts().collectLatest { products ->
+                val scanCount = products.size
+                val rank = GamificationEngine.calculateRank(scanCount)
+                val badges = GamificationEngine.getBadges(products)
+
+                binding.apply {
+                    tvRankName.text = getString(rank.nameResId)
+                    pbRankProgress.progress = rank.percentage
+                    tvScanCountProgress.text = getString(R.string.label_scan_count, scanCount)
+                }
+
+                updateBadgesPreview(badges.filter { it.isUnlocked })
+            }
+        }
+    }
+
+    private fun updateBadgesPreview(unlockedBadges: List<com.ecotracker.utils.Badge>) {
+        binding.layoutBadgesPreview.removeAllViews()
+        
+        if (unlockedBadges.isEmpty()) {
+            // Optional: show a "No badges yet" message
+            return
+        }
+
+        unlockedBadges.take(5).forEach { badge ->
+            val imageView = ImageView(context).apply {
+                layoutParams = LinearLayout.LayoutParams(120, 120).apply {
+                    setMargins(0, 0, 16, 0)
+                }
+                setImageResource(R.drawable.ic_quests)
+                imageTintList = android.content.res.ColorStateList.valueOf(
+                    resources.getColor(R.color.eco_green, null)
+                )
+            }
+            binding.layoutBadgesPreview.addView(imageView)
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

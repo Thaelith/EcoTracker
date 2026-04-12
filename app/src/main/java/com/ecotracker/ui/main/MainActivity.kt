@@ -41,8 +41,7 @@ class MainActivity : AppCompatActivity() {
             R.id.scanFragment,
             R.id.historyFragment,
             R.id.statisticsFragment,
-            R.id.leaderboardFragment,
-            R.id.questsFragment,
+            R.id.achievementsFragment,
             R.id.profileFragment
         )
 

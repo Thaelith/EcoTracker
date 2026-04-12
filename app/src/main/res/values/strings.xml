@@ -12,6 +12,7 @@
     <string name="btn_scan">Scan Barcode</string>
     <string name="btn_save">Save to History</string>
     <string name="btn_scan_again">Scan Again</string>
+    <string name="label_carbon">Carbon Footprint</string>
 
     <!-- History screen -->
     <string name="history_empty_title">No scans yet</string>
@@ -23,7 +24,36 @@
     <string name="label_total_scans">Total Products Scanned</string>
     <string name="chart_title">Daily Carbon Footprint (last 7 days)</string>
 
-    <!-- Labels -->
-    <string name="label_carbon">Carbon Footprint</string>
-    <string name="label_eco_score">Eco-Score</string>
+    <!-- Comparison screen -->
+    <string name="title_comparison">Product Comparison</string>
+    <string name="label_winner">Winner: %s</string>
+    <string name="label_lower_impact">%.1f%% lower impact</string>
+    <string name="label_impact_difference">%.2f kg CO2e difference</string>
+    <string name="msg_incomplete_comparison">Some data is missing. Showing partial comparison.</string>
+
+    <!-- Achievements screen -->
+    <string name="title_achievements">My Achievements</string>
+    <string name="achievements_subtitle">Unlock badges on your journey to a greener planet</string>
+    
+    <!-- Ranks -->
+    <string name="rank_seedling">Seedling</string>
+    <string name="rank_sprout">Sprout</string>
+    <string name="rank_sapling">Sapling</string>
+    <string name="rank_tree">Tree</string>
+    <string name="rank_forest_guardian">Forest Guardian</string>
+
+    <!-- Badges -->
+    <string name="badge_first_seed_name">First Seed</string>
+    <string name="badge_first_seed_desc">Successfully completed your first scan</string>
+    <string name="badge_eco_expert_name">Eco-Expert</string>
+    <string name="badge_eco_expert_desc">Scanned at least 5 products</string>
+    <string name="badge_verified_scout_name">Verified Scout</string>
+    <string name="badge_verified_scout_desc">Identified a product with verified data</string>
+    <string name="badge_carbon_hero_name">Carbon Hero</string>
+    <string name="badge_carbon_hero_desc">Found a product with low carbon impact</string>
+
+    <!-- Profile -->
+    <string name="label_eco_rank">Eco Rank</string>
+    <string name="label_recent_achievements">Recent Achievements</string>
+    <string name="label_scan_count">%d scans</string>
 </resources>

@@ -14,7 +14,8 @@ import com.ecotracker.utils.toFormattedDate
 
 class ProductHistoryAdapter(
     private val onItemClick: (ScannedProduct) -> Unit,
-    private val onDeleteClick: (ScannedProduct) -> Unit
+    private val onDeleteClick: (ScannedProduct) -> Unit,
+    private val onCompareClick: (ScannedProduct) -> Unit
 ) : ListAdapter<ScannedProduct, ProductHistoryAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -47,6 +48,7 @@ class ProductHistoryAdapter(
 
                 root.setOnClickListener { onItemClick(product) }
                 btnDelete.setOnClickListener { onDeleteClick(product) }
+                btnCompare.setOnClickListener { onCompareClick(product) }
             }
         }
     }

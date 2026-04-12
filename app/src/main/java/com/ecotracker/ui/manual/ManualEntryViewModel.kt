@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecotracker.data.local.ScannedProduct
+import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.repository.EcoTrackerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -33,7 +34,8 @@ class ManualEntryViewModel @Inject constructor(
             imageUrl = imageUrl,
             ecoScore = "N/A",
             ecoScoreValue = 0,
-            carbonFootprint = 0.0
+            carbonFootprint = null,
+            status = EstimationStatus.NEEDS_ESTIMATION
         )
 
         viewModelScope.launch {

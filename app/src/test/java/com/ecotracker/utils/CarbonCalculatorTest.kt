@@ -10,6 +10,8 @@ import org.junit.Test
 class CarbonCalculatorTest {
 
     private fun createProduct(
+        productName: String? = null,
+        categories: String? = null,
         ecoScoreGrade: String? = null,
         ecoScoreData: EcoScoreDataDto? = null,
         nutriments: NutrimentsDto? = null,
@@ -17,10 +19,10 @@ class CarbonCalculatorTest {
     ): ProductDto {
         return ProductDto(
             barcode = null,
-            productName = null,
+            productName = productName,
             productNameEn = null,
             brands = null,
-            categories = null,
+            categories = categories,
             imageUrl = null,
             imageFrontUrl = null,
             ecoScoreGrade = ecoScoreGrade,
@@ -30,7 +32,8 @@ class CarbonCalculatorTest {
             productQuantity = productQuantity,
             packaging = null,
             origins = null,
-            manufacturingPlaces = null
+            manufacturingPlaces = null,
+            quantity = null
         )
     }
 
@@ -38,14 +41,16 @@ class CarbonCalculatorTest {
     fun `calculateCarbonFootprint should return exactly 0_5 for grade A with default 1kg`() {
         val product = createProduct(ecoScoreGrade = "a")
         val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(0.5, result, 0.001)
+        assertEquals(0.5, result.value!!, 0.001)
+        assertEquals(com.ecotracker.data.local.EstimationStatus.CATEGORY_AVERAGE, result.status)
     }
 
     @Test
     fun `calculateCarbonFootprint should return exactly 1_4 for grade B with default 1kg`() {
         val product = createProduct(ecoScoreGrade = "B")
         val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(1.4, result, 0.001)
+        assertEquals(1.4, result.value!!, 0.001)
+        assertEquals(com.ecotracker.data.local.EstimationStatus.CATEGORY_AVERAGE, result.status)
     }
 
     @Test
@@ -54,7 +59,7 @@ class CarbonCalculatorTest {
         // Total should be 5.5 kg CO2e
         val product = createProduct(ecoScoreGrade = "e", productQuantity = 500.0)
         val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(5.5, result, 0.001)
+        assertEquals(5.5, result.value!!, 0.001)
     }
 
     @Test
@@ -70,7 +75,8 @@ class CarbonCalculatorTest {
             productQuantity = 200.0
         )
         val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(0.84, result, 0.001)
+        assertEquals(0.84, result.value!!, 0.001)
+        assertEquals(com.ecotracker.data.local.EstimationStatus.VERIFIED, result.status)
     }
 
     @Test
@@ -86,6 +92,30 @@ class CarbonCalculatorTest {
             productQuantity = 100.0
         )
         val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(0.14, result, 0.001)
+        assertEquals(0.14, result.value!!, 0.001)
+        assertEquals(com.ecotracker.data.local.EstimationStatus.VERIFIED, result.status)
+    }
+
+    @Test
+    fun `calculateCarbonFootprint should use category map if grade is missing`() {
+        // "Beef steak" contains "beef" which is 27.0 kg CO2e / kg
+        val product = createProduct(
+            productName = "Beef steak",
+            productQuantity = 1000.0
+        )
+        val result = CarbonCalculator.calculateCarbonFootprint(product)
+        assertEquals(27.0, result.value!!, 0.001)
+        assertEquals(com.ecotracker.data.local.EstimationStatus.CATEGORY_AVERAGE, result.status)
+    }
+
+    @Test
+    fun `calculateCarbonFootprint should return null for unknown items with no data`() {
+        val product = createProduct(
+            productName = "Mysterious Alien Gadget",
+            productQuantity = 1000.0
+        )
+        val result = CarbonCalculator.calculateCarbonFootprint(product)
+        assertEquals(null, result.value)
+        assertEquals(com.ecotracker.data.local.EstimationStatus.NEEDS_ESTIMATION, result.status)
     }
 }

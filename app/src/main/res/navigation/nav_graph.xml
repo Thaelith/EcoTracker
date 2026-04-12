@@ -18,7 +18,11 @@
     <fragment
         android:id="@+id/historyFragment"
         android:name="com.ecotracker.ui.history.HistoryFragment"
-        android:label="@string/title_history" />
+        android:label="@string/title_history">
+        <action
+            android:id="@+id/action_historyFragment_to_comparisonFragment"
+            app:destination="@id/comparisonFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/statisticsFragment"
@@ -36,16 +40,16 @@
     </fragment>
 
     <fragment
-        android:id="@+id/leaderboardFragment"
-        android:name="com.ecotracker.ui.leaderboard.LeaderboardFragment"
-        android:label="Leaderboard"
-        tools:layout="@layout/fragment_leaderboard" />
+        android:id="@+id/achievementsFragment"
+        android:name="com.ecotracker.ui.achievements.AchievementsFragment"
+        android:label="Achievements"
+        tools:layout="@layout/fragment_achievements" />
 
     <fragment
-        android:id="@+id/questsFragment"
-        android:name="com.ecotracker.ui.quests.QuestsFragment"
-        android:label="Quests"
-        tools:layout="@layout/fragment_quests" />
+        android:id="@+id/comparisonFragment"
+        android:name="com.ecotracker.ui.comparison.ComparisonFragment"
+        android:label="Product Comparison"
+        tools:layout="@layout/fragment_comparison" />
 
     <fragment
         android:id="@+id/profileFragment"

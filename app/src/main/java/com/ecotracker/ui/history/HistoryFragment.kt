@@ -5,12 +5,17 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.ecotracker.R
 import com.ecotracker.databinding.FragmentHistoryBinding
+import com.ecotracker.ui.comparison.ComparisonViewModel
 import com.ecotracker.utils.gone
 import com.ecotracker.utils.visible
 import dagger.hilt.android.AndroidEntryPoint
+import com.google.android.material.snackbar.Snackbar
 
 @AndroidEntryPoint
 class HistoryFragment : Fragment() {
@@ -18,6 +23,7 @@ class HistoryFragment : Fragment() {
     private var _binding: FragmentHistoryBinding? = null
     private val binding get() = _binding!!
     private val viewModel: HistoryViewModel by viewModels()
+    private val comparisonViewModel: ComparisonViewModel by activityViewModels()
     private lateinit var adapter: ProductHistoryAdapter
 
     override fun onCreateView(
@@ -31,12 +37,16 @@ class HistoryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         observeViewModel()
+        observeComparison()
     }
 
     private fun setupRecyclerView() {
         adapter = ProductHistoryAdapter(
             onItemClick = { /* Navigate to detail if needed */ },
-            onDeleteClick = { viewModel.deleteProduct(it) }
+            onDeleteClick = { viewModel.deleteProduct(it) },
+            onCompareClick = { product -> 
+                comparisonViewModel.toggleProductSelection(product)
+            }
         )
         binding.recyclerHistory.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -55,6 +65,27 @@ class HistoryFragment : Fragment() {
                 adapter.submitList(products)
             }
         }
+    }
+
+    private fun observeComparison() {
+        comparisonViewModel.selectedProducts.observe(viewLifecycleOwner) { selected ->
+            when (selected.size) {
+                1 -> {
+                    view?.let { 
+                        Snackbar.make(it, "1 of 2 selected for comparison", Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+                2 -> {
+                    findNavController().navigate(R.id.action_historyFragment_to_comparisonFragment)
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Reset selection when returning to history
+        comparisonViewModel.clearSelection()
     }
 
     override fun onDestroyView() {

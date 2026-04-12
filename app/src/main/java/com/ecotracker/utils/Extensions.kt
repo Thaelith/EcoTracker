@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.View
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
+import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.remote.ProductDto
 import com.google.android.material.snackbar.Snackbar
@@ -54,13 +55,16 @@ fun startOfDay(offsetDays: Int = 0): Long {
 fun ProductDto.toScannedProduct(barcode: String): ScannedProduct {
     val grade = ecoScoreGrade?.uppercase() ?: "N/A"
     val score = ecoScoreScore ?: ecoScoreData?.score ?: 0
+    val calc = CarbonCalculator.calculateCarbonFootprint(this)
+    
     return ScannedProduct(
         barcode       = barcode,
         productName   = productName ?: productNameEn ?: "Unknown Product",
         brand         = brands ?: "Unknown Brand",
         ecoScore      = grade,
         ecoScoreValue = score,
-        carbonFootprint = CarbonCalculator.calculateCarbonFootprint(this),
+        carbonFootprint = calc.value,
+        status        = calc.status,
         imageUrl      = imageUrl ?: imageFrontUrl ?: "",
         categories    = categories ?: ""
     )
@@ -82,7 +86,9 @@ fun String.ecoScoreColor(): Int = when (this.uppercase()) {
 /**
  * Maps a CO2e value (kg) to a color gradient interpolating from Green (0) to Yellow (3.0) to Red (11.0+).
  */
-fun Double.toColorGradient(): Int {
+fun Double?.toColorGradient(): Int {
+    if (this == null) return Color.parseColor("#9e9e9e") // Grey for unknown
+
     val green = Color.parseColor("#1a9850")  // 0.0
     val yellow = Color.parseColor("#ffd54f") // ~3.0
     val red = Color.parseColor("#d73027")    // >= 11.0
@@ -93,4 +99,14 @@ fun Double.toColorGradient(): Int {
         this < 11.0 -> ColorUtils.blendARGB(yellow, red, ((this - 3.0) / 8.0).toFloat())
         else -> red
     }
+}
+
+// ── Status Color Helper ───────────────────────────────────────────────────────
+
+fun EstimationStatus.toColor(): Int = when (this) {
+    EstimationStatus.VERIFIED         -> Color.parseColor("#1b5e20") // Deep Green
+    EstimationStatus.AI_ESTIMATED     -> Color.parseColor("#1565c0") // Deep Blue
+    EstimationStatus.CATEGORY_AVERAGE -> Color.parseColor("#f9a825") // Deep Yellow
+    EstimationStatus.NEEDS_ESTIMATION -> Color.parseColor("#ef6c00") // Orange
+    EstimationStatus.UNIDENTIFIED     -> Color.parseColor("#9e9e9e") // Grey
 }

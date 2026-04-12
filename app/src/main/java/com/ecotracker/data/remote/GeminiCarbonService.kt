@@ -1,6 +1,8 @@
 package com.ecotracker.data.remote
 
 import com.ecotracker.BuildConfig
+import com.ecotracker.data.local.EstimationStatus
+import com.ecotracker.data.local.ScannedProduct
 import com.google.ai.client.generativeai.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,7 +15,7 @@ import kotlinx.coroutines.withContext
  */
 data class GeminiAnalysis(
     val estimatedCategory: String,
-    val kgCo2e: Double,
+    val kgCo2e: Double?,
     val reasoning: String,
     val confidence: String,
     val dataQuality: String
@@ -21,7 +23,6 @@ data class GeminiAnalysis(
 
 object GeminiCarbonService {
 
-    // Make sure you provide GEMINI_API_KEY in local.properties
     private val apiKey = BuildConfig.GEMINI_API_KEY
 
     private val generativeModel by lazy {
@@ -68,17 +69,12 @@ object GeminiCarbonService {
                 val response = generativeModel.generateContent(prompt)
                 val text = response.text?.replace("```json", "")?.replace("```", "")?.trim()
                 
-                android.util.Log.d(LOG_TAG, "Raw Response received")
-
-                if (text.isNullOrBlank()) {
-                    android.util.Log.e(LOG_TAG, "Response text is empty")
-                    return@withContext null
-                }
+                if (text.isNullOrBlank()) return@withContext null
 
                 val json = com.google.gson.JsonParser.parseString(text).asJsonObject
                 GeminiAnalysis(
                     estimatedCategory = json.get("estimated_category")?.asString ?: "Unknown",
-                    kgCo2e = json.get("kg_co2e")?.asDouble ?: 0.0,
+                    kgCo2e = json.get("kg_co2e")?.let { if (it.isJsonNull) null else it.asDouble },
                     reasoning = json.get("reasoning")?.asString ?: "No reasoning provided",
                     confidence = json.get("confidence")?.asString ?: "Unknown",
                     dataQuality = json.get("data_quality_flag")?.asString ?: "Expert Estimate"
@@ -95,7 +91,7 @@ object GeminiCarbonService {
     /**
      * Prompts the LLM to identify a product using its barcode and a helpful hint from the user.
      */
-    suspend fun identifyProductWithUserHint(barcode: String, userHint: String): com.ecotracker.data.local.ScannedProduct? {
+    suspend fun identifyProductWithUserHint(barcode: String, userHint: String): ScannedProduct? {
         android.util.Log.d(LOG_TAG, "Identifying barcode='$barcode' with user description")
         
         if (apiKey.isBlank()) return null
@@ -123,8 +119,6 @@ object GeminiCarbonService {
                 val response = generativeModel.generateContent(prompt)
                 val text = response.text?.replace("```json", "")?.replace("```", "")?.trim()
                 
-                android.util.Log.d(LOG_TAG, "Response received for barcode")
-
                 if (text.isNullOrBlank()) return@withContext null
 
                 val json = com.google.gson.JsonParser.parseString(text).asJsonObject
@@ -132,15 +126,16 @@ object GeminiCarbonService {
                 val productName = json.get("product_name")?.asString ?: "Unknown Product"
                 val category = json.get("estimated_category")?.asString ?: "Unknown"
                 
-                com.ecotracker.data.local.ScannedProduct(
+                ScannedProduct(
                     barcode = barcode,
                     productName = productName,
                     brand = "",
                     categories = category,
-                    imageUrl = "", // No image
+                    imageUrl = "",
                     ecoScore = "not-applicable",
                     ecoScoreValue = -1,
-                    carbonFootprint = json.get("kg_co2e")?.asDouble ?: 0.0,
+                    carbonFootprint = json.get("kg_co2e")?.let { if (it.isJsonNull) null else it.asDouble },
+                    status = EstimationStatus.AI_ESTIMATED,
                     aiReasoning = json.get("reasoning")?.asString ?: "No reasoning provided",
                     aiConfidence = json.get("confidence")?.asString ?: "Medium",
                     aiDataQuality = json.get("data_quality_flag")?.asString ?: "User-Assisted Estimate"

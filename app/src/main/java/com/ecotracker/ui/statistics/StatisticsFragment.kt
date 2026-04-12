@@ -97,7 +97,7 @@ class StatisticsFragment : Fragment() {
             for (i in 0..6) {
                 val dayOfYear = iterCal.get(Calendar.DAY_OF_YEAR)
                 val dayList = groupedByDay[dayOfYear] ?: emptyList()
-                val sumCarbon = dayList.sumOf { it.carbonFootprint }.toFloat()
+                val sumCarbon = dayList.filter { it.carbonFootprint != null }.sumOf { it.carbonFootprint!! }.toFloat()
 
                 entries.add(BarEntry(i.toFloat(), sumCarbon))
                 labels.add(format.format(iterCal.time))
