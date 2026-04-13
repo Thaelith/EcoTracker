@@ -30,4 +30,9 @@
     <!-- Bottom nav selector -->
     <color name="bottom_nav_selected">@color/md_theme_primary</color>
     <color name="bottom_nav_unselected">#757575</color>
+    
+    <!-- Leaderboard Rank Colors -->
+    <color name="rank_first">#FFD700</color>  <!-- Gold -->
+    <color name="rank_second">#C0C0C0</color> <!-- Silver -->
+    <color name="rank_third">#CD7F32</color>  <!-- Bronze -->
 </resources>

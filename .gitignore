@@ -10,3 +10,13 @@
 local.properties
 build/
 *.log
+
+# Firebase & Secrets
+app/google-services.json
+*.jks
+*.keystore
+
+# Tool Metadata
+.gemini/
+.kotlin/
+.vscode/

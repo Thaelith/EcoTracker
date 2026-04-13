@@ -5,35 +5,85 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import com.ecotracker.R
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.ecotracker.databinding.FragmentLeaderboardBinding
+import com.ecotracker.utils.Resource
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class LeaderboardFragment : Fragment() {
+
+    private var _binding: FragmentLeaderboardBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: LeaderboardViewModel by viewModels()
+    private lateinit var adapter: LeaderboardAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_leaderboard, container, false)
+    ): View {
+        _binding = FragmentLeaderboardBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        val rvLeaderboard = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvLeaderboard)
-        
-        val dummyData = listOf(
-            DummyUser(1, "EcoHero99", "Level 5", "3,500 XP"),
-            DummyUser(2, "GreenQueen", "Level 4", "2,900 XP"),
-            DummyUser(3, "PlanetSaver", "Level 4", "2,650 XP"),
-            DummyUser(4, "TreeHugger", "Level 3", "1,800 XP"),
-            DummyUser(5, "RecyclePro", "Level 3", "1,750 XP"),
-            DummyUser(6, "EarthDefender", "Level 2", "900 XP"),
-            DummyUser(7, "LeafBlower", "Level 2", "750 XP"),
-            DummyUser(8, "SunPraiser", "Level 2", "600 XP"),
-            DummyUser(9, "VeganViking", "Level 1", "200 XP"),
-            DummyUser(10, "CompostKing", "Level 1", "50 XP")
-        )
-        
-        rvLeaderboard.adapter = LeaderboardAdapter(dummyData)
+        setupRecyclerView()
+        setupSwipeRefresh()
+        observeViewModel()
+    }
+
+    private fun setupRecyclerView() {
+        adapter = LeaderboardAdapter()
+        binding.rvLeaderboard.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = this@LeaderboardFragment.adapter
+        }
+    }
+
+    private fun setupSwipeRefresh() {
+        binding.swipeRefresh.setOnRefreshListener {
+            viewModel.fetchLeaderboard()
+        }
+    }
+
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.leaderboardState.collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            binding.swipeRefresh.isRefreshing = false
+                            binding.progressBar.visibility = View.GONE
+                            val users = resource.data ?: emptyList()
+                            adapter.submitList(users)
+                            binding.emptyState.visibility = if (users.isEmpty()) View.VISIBLE else View.GONE
+                        }
+                        is Resource.Error -> {
+                            binding.swipeRefresh.isRefreshing = false
+                            binding.progressBar.visibility = View.GONE
+                            // In a real app, show a snackbar or toast
+                        }
+                        is Resource.Loading -> {
+                            if (!binding.swipeRefresh.isRefreshing) {
+                                binding.progressBar.visibility = View.VISIBLE
+                            }
+                            binding.emptyState.visibility = View.GONE
+                        }
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

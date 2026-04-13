@@ -72,12 +72,24 @@ object GeminiCarbonService {
                 if (text.isNullOrBlank()) return@withContext null
 
                 val json = com.google.gson.JsonParser.parseString(text).asJsonObject
+                
+                // Safer field extraction
+                fun getString(key: String, default: String) = json.get(key)?.let { 
+                    if (it.isJsonPrimitive) it.asString else default 
+                } ?: default
+                
+                fun getDouble(key: String): Double? = json.get(key)?.let {
+                    if (it.isJsonPrimitive && (it.asJsonPrimitive.isNumber || it.asJsonPrimitive.isString)) {
+                        try { it.asDouble } catch (e: Exception) { null }
+                    } else null
+                }
+
                 GeminiAnalysis(
-                    estimatedCategory = json.get("estimated_category")?.asString ?: "Unknown",
-                    kgCo2e = json.get("kg_co2e")?.let { if (it.isJsonNull) null else it.asDouble },
-                    reasoning = json.get("reasoning")?.asString ?: "No reasoning provided",
-                    confidence = json.get("confidence")?.asString ?: "Unknown",
-                    dataQuality = json.get("data_quality_flag")?.asString ?: "Expert Estimate"
+                    estimatedCategory = getString("estimated_category", "Unknown"),
+                    kgCo2e = getDouble("kg_co2e"),
+                    reasoning = getString("reasoning", "No reasoning provided"),
+                    confidence = getString("confidence", "Unknown"),
+                    dataQuality = getString("data_quality_flag", "Expert Estimate")
                 ).also {
                     android.util.Log.d(LOG_TAG, "Analysis Complete: $it")
                 }
@@ -92,7 +104,7 @@ object GeminiCarbonService {
      * Prompts the LLM to identify a product using its barcode and a helpful hint from the user.
      */
     suspend fun identifyProductWithUserHint(barcode: String, userHint: String): ScannedProduct? {
-        android.util.Log.d(LOG_TAG, "Identifying barcode='$barcode' with user description")
+        android.util.Log.d(LOG_TAG, "Identifying masked barcode='${barcode.take(4)}...' with user description")
         
         if (apiKey.isBlank()) return null
         
@@ -123,22 +135,30 @@ object GeminiCarbonService {
 
                 val json = com.google.gson.JsonParser.parseString(text).asJsonObject
                 
-                val productName = json.get("product_name")?.asString ?: "Unknown Product"
-                val category = json.get("estimated_category")?.asString ?: "Unknown"
+                // Safer field extraction
+                fun getString(key: String, default: String) = json.get(key)?.let { 
+                    if (it.isJsonPrimitive) it.asString else default 
+                } ?: default
                 
+                fun getDouble(key: String): Double? = json.get(key)?.let {
+                    if (it.isJsonPrimitive && (it.asJsonPrimitive.isNumber || it.asJsonPrimitive.isString)) {
+                        try { it.asDouble } catch (e: Exception) { null }
+                    } else null
+                }
+
                 ScannedProduct(
                     barcode = barcode,
-                    productName = productName,
+                    productName = getString("product_name", "Unknown Product"),
                     brand = "",
-                    categories = category,
+                    categories = getString("estimated_category", "Unknown"),
                     imageUrl = "",
                     ecoScore = "not-applicable",
                     ecoScoreValue = -1,
-                    carbonFootprint = json.get("kg_co2e")?.let { if (it.isJsonNull) null else it.asDouble },
+                    carbonFootprint = getDouble("kg_co2e"),
                     status = EstimationStatus.AI_ESTIMATED,
-                    aiReasoning = json.get("reasoning")?.asString ?: "No reasoning provided",
-                    aiConfidence = json.get("confidence")?.asString ?: "Medium",
-                    aiDataQuality = json.get("data_quality_flag")?.asString ?: "User-Assisted Estimate"
+                    aiReasoning = getString("reasoning", "No reasoning provided"),
+                    aiConfidence = getString("confidence", "Medium"),
+                    aiDataQuality = getString("data_quality_flag", "User-Assisted Estimate")
                 ).also {
                     android.util.Log.d(LOG_TAG, "Identification Successful: ${it.productName}")
                 }

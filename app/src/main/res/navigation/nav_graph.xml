@@ -57,4 +57,10 @@
         android:label="Profile"
         tools:layout="@layout/fragment_profile" />
 
+    <fragment
+        android:id="@+id/leaderboardFragment"
+        android:name="com.ecotracker.ui.leaderboard.LeaderboardFragment"
+        android:label="Global Leaderboard"
+        tools:layout="@layout/fragment_leaderboard" />
+
 </navigation>

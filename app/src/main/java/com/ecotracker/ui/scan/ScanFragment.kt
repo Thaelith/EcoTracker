@@ -107,10 +107,26 @@ class ScanFragment : Fragment() {
             }
         }
 
-        viewModel.savedState.observe(viewLifecycleOwner) { saved ->
-            if (saved == true) {
-                requireContext().toast("Product saved to history!")
-                viewModel.onProductSavedToastShown()
+        viewModel.savedState.observe(viewLifecycleOwner) { resource ->
+            when (resource) {
+                is Resource.Loading -> {
+                    showLoading(true)
+                    binding.btnSaveProduct.isEnabled = false
+                }
+                is Resource.Success -> {
+                    showLoading(false)
+                    requireContext().toast(getString(R.string.msg_save_success))
+                    viewModel.onProductSavedToastShown()
+                    // Keep button disabled after success to prevent re-saves
+                }
+                is Resource.Error -> {
+                    showLoading(false)
+                    binding.btnSaveProduct.isEnabled = true
+                    requireContext().toast(resource.message)
+                }
+                else -> {
+                    showLoading(false)
+                }
             }
         }
 

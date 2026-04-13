@@ -18,6 +18,8 @@ import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.channels.awaitClose
 
 @Singleton
 class EcoTrackerRepository @Inject constructor(
@@ -27,7 +29,7 @@ class EcoTrackerRepository @Inject constructor(
     private val dao: ScannedProductDao
 ) {
     suspend fun fetchProductByBarcode(barcode: String): Resource<ScannedProduct> = coroutineScope {
-        android.util.Log.d("EcoRepo", "=== Starting parallel lookup for barcode: $barcode ===")
+        android.util.Log.d("EcoRepo", "=== Starting parallel lookup for barcode: ${barcode.take(4)}... ===")
         
         val offDeferred = async { tryOpenFoodFacts(barcode) }
         val obfDeferred = async { tryOpenBeautyFacts(barcode) }
@@ -57,12 +59,12 @@ class EcoTrackerRepository @Inject constructor(
             return@coroutineScope Resource.Success(upcResult)
         }
 
-        android.util.Log.d("EcoRepo", "[Final] All databases/AI failed. Requesting user input for barcode $barcode...")
+        android.util.Log.d("EcoRepo", "[Final] All databases/AI failed. Requesting user input for masked barcode ${barcode.take(4)}...")
         Resource.NeedsInput(barcode)
     }
 
     suspend fun estimateWithUserPrompt(barcode: String, userHint: String): Resource<ScannedProduct> {
-        android.util.Log.d("EcoRepo", "User provided description for barcode $barcode")
+        android.util.Log.d("EcoRepo", "User provided description for masked barcode ${barcode.take(4)}")
         val aiGuessResult = com.ecotracker.data.remote.GeminiCarbonService.identifyProductWithUserHint(barcode, userHint)
         
         if (aiGuessResult != null) {
@@ -124,6 +126,15 @@ class EcoTrackerRepository @Inject constructor(
             val db = FirebaseFirestore.getInstance()
             val doc = db.collection("global_products").document(barcode).get().await()
             if (doc.exists()) {
+                val cachedAt = doc.getLong("cachedAt") ?: 0L
+                val lifespan = System.currentTimeMillis() - cachedAt
+                val ninetyDaysMillis = 90L * 24 * 60 * 60 * 1000L
+                
+                if (lifespan > ninetyDaysMillis) {
+                    android.util.Log.d("EcoRepo", "Global cache hit is STALE (> 90 days). Ignoring.")
+                    return null
+                }
+
                 ScannedProduct(
                     barcode        = barcode,
                     productName    = doc.getString("productName") ?: "Unknown",
@@ -201,32 +212,45 @@ class EcoTrackerRepository @Inject constructor(
 
     // ── Local ─────────────────────────────────────────────────────────────────
 
-    suspend fun saveProduct(product: ScannedProduct): Long {
+    suspend fun saveProduct(product: ScannedProduct, remoteId: String): Long {
         val id = dao.insertProduct(product)
         
         // Sync with Firestore if logged in
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user != null) {
+        val firebaseUser = FirebaseAuth.getInstance().currentUser
+        if (firebaseUser != null) {
             val db = FirebaseFirestore.getInstance()
+            val userRef = db.collection("users").document(firebaseUser.uid)
+            val scanRef = userRef.collection("scans").document(remoteId)
             
-            val scanData = hashMapOf(
-                "barcode" to product.barcode,
-                "productName" to product.productName,
-                "carbonFootprint" to product.carbonFootprint,
-                "status" to product.status.name, // Added status
-                "timestamp" to product.timestamp
-            )
-            
-            db.collection("users").document(user.uid)
-                .collection("scans").add(scanData)
-                
-            // Safe null check for increment
-            product.carbonFootprint?.let { carbon ->
-                if (carbon > 0.0) {
-                    db.collection("users").document(user.uid)
-                        .update("co2e", FieldValue.increment(carbon))
+            db.runTransaction { transaction ->
+                // 1. Check if this deterministic scan ID already exists (idempotency)
+                val scanDoc = transaction.get(scanRef)
+                if (!scanDoc.exists()) {
+                    // 2. Add scan history
+                    val scanData = hashMapOf(
+                        "barcode" to product.barcode,
+                        "productName" to product.productName,
+                        "carbonFootprint" to product.carbonFootprint,
+                        "status" to product.status.name,
+                        "timestamp" to product.timestamp
+                    )
+                    transaction.set(scanRef, scanData)
+                    
+                    // 3. Increment counters
+                    val updates = mutableMapOf<String, Any>(
+                        "scanCount" to FieldValue.increment(1)
+                    )
+                    
+                    product.carbonFootprint?.let { carbon ->
+                        if (carbon > 0.0) {
+                            updates["co2e"] = FieldValue.increment(carbon)
+                        }
+                    }
+                    
+                    transaction.update(userRef, updates)
                 }
-            }
+                null // Transaction requires a return value
+            }.await()
         }
         return id
     }
@@ -249,4 +273,31 @@ class EcoTrackerRepository @Inject constructor(
         dao.getProductByBarcode(barcode)
 
     suspend fun deleteAllProducts() = dao.deleteAll()
+
+    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> = kotlinx.coroutines.flow.callbackFlow {
+        val db = FirebaseFirestore.getInstance()
+        val listener = db.collection("users")
+            .orderBy("scanCount", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(20)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Resource.Error(error.message ?: "Unknown error"))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val users = snapshot.documents.mapIndexed { index, doc ->
+                        com.ecotracker.data.model.LeaderboardUser(
+                            uid = doc.id,
+                            rank = index + 1,
+                            username = doc.getString("username") ?: "Anonymous",
+                            scanCount = doc.getLong("scanCount")?.toInt() ?: 0,
+                            co2e = doc.getDouble("co2e") ?: 0.0
+                        )
+                    }
+                    trySend(Resource.Success(users))
+                }
+            }
+        awaitClose { listener.remove() }
+    }
 }

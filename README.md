@@ -2,6 +2,21 @@
 
 EcoTracker is an Android application built to help users scan product barcodes and track their environmental impact. It utilizes a multi-layered discovery system combining crowdsourced data and generative AI to provide accurate carbon footprint estimations even for products not found in traditional databases.
 
+## Getting Started
+
+### Prerequisites
+1. **API Keys**: This project requires a Gemini AI API key.
+   - Copy `local.properties.example` to `local.properties`.
+   - Add your API key: `GEMINI_API_KEY=YOUR_KEY_HERE`.
+2. **Firebase Setup**:
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/).
+   - Add an Android app and download your `google-services.json`.
+   - Place `google-services.json` in the `app/` directory.
+
+> [!CAUTION]
+> **Security Warning**: If you have already initialized Git in this project, `app/google-services.json` may be tracked. To stop tracking it without deleting it, run:
+> `git rm --cached app/google-services.json`
+
 ## Features
 
 - **Multi-Layered Product Discovery:** A robust, automated pipeline that integrates verified environmental databases, community caching, and generative AI to identify products and calculate carbon impact.

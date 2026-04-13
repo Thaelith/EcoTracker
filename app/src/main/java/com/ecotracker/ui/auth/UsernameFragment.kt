@@ -48,6 +48,7 @@ class UsernameFragment : Fragment() {
             val userProfile = hashMapOf(
                 "username" to username,
                 "co2e" to 0.0,
+                "scanCount" to 0,
                 "createdAt" to System.currentTimeMillis()
             )
 

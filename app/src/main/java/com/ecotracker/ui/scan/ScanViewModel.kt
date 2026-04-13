@@ -19,8 +19,8 @@ class ScanViewModel @Inject constructor(
     private val _scanState = MutableLiveData<Resource<ScannedProduct>>()
     val scanState: LiveData<Resource<ScannedProduct>> = _scanState
 
-    private val _savedState = MutableLiveData<Boolean>()
-    val savedState: LiveData<Boolean> = _savedState
+    private val _savedState = MutableLiveData<Resource<Unit>?>()
+    val savedState: LiveData<Resource<Unit>?> = _savedState
 
     private val _showManualEntry = MutableLiveData<String?>()
     val showManualEntry: LiveData<String?> = _showManualEntry
@@ -61,9 +61,15 @@ class ScanViewModel @Inject constructor(
     }
 
     fun saveProduct(product: ScannedProduct) {
+        _savedState.value = Resource.Loading
         viewModelScope.launch {
-            val id = repository.saveProduct(product)
-            _savedState.value = id > 0
+            try {
+                val remoteId = "${product.barcode}_${product.timestamp}"
+                repository.saveProduct(product, remoteId)
+                _savedState.postValue(Resource.Success(Unit))
+            } catch (e: Exception) {
+                _savedState.postValue(Resource.Error(e.message ?: "Failed to save product"))
+            }
         }
     }
 
@@ -80,7 +86,7 @@ class ScanViewModel @Inject constructor(
     }
 
     fun resetState() {
-        _savedState.value = false
+        _savedState.value = null
         _showManualEntry.value = null
         _showInputPrompt.value = null
     }

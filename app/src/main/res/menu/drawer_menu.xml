@@ -17,6 +17,10 @@
             android:id="@+id/achievementsFragment"
             android:icon="@drawable/ic_quests"
             android:title="Achievements" />
+        <item
+            android:id="@+id/leaderboardFragment"
+            android:icon="@drawable/ic_leaderboard"
+            android:title="@string/menu_leaderboard" />
     </group>
 
     <item android:title="Account">

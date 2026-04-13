@@ -1,0 +1,8 @@
+## This is an example file. 
+## Copy this to local.properties and fill in your actual keys.
+
+# Gemini AI API Key (from https://aistudio.google.com/)
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
+
+# Other local settings
+# sdk.dir=C\:\\Users\\...\\AppData\\Local\\Android\\Sdk
