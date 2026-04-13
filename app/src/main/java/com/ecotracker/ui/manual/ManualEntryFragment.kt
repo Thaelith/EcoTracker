@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import com.ecotracker.R
 import com.ecotracker.databinding.FragmentManualEntryBinding
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -34,7 +35,7 @@ class ManualEntryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.barcodeTextView.text = "Barcode: ${args.barcode}"
+        binding.barcodeTextView.text = getString(R.string.label_barcode_format, args.barcode)
 
         binding.searchOnWebButton.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${args.barcode}"))

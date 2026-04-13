@@ -1,98 +1,152 @@
 # EcoTracker
 
-EcoTracker is an Android application built to help users scan product barcodes and track their environmental impact. It utilizes a multi-layered discovery system combining crowdsourced data and generative AI to provide accurate carbon footprint estimations even for products not found in traditional databases.
+Android app for scanning product barcodes and tracking carbon footprint. Uses a multi-source lookup pipeline combined with Gemini AI for carbon estimation.
 
-## Getting Started
+## Architecture
 
-### Prerequisites
-1. **API Keys**: This project requires a Gemini AI API key.
-   - Copy `local.properties.example` to `local.properties`.
-   - Add your API key: `GEMINI_API_KEY=YOUR_KEY_HERE`.
-2. **Firebase Setup**:
-   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/).
-   - Add an Android app and download your `google-services.json`.
-   - Place `google-services.json` in the `app/` directory.
+```
+MVVM + Hilt + Room + Firebase
 
-> [!CAUTION]
-> **Security Warning**: If you have already initialized Git in this project, `app/google-services.json` may be tracked. To stop tracking it without deleting it, run:
-> `git rm --cached app/google-services.json`
+View (Fragments)
+  └─ ViewModel (LiveData / StateFlow)
+       └─ Repository (single source of truth)
+            ├─ Room DAO (local persistence)
+            ├─ Retrofit APIs (OFF, OBF, UPCitemdb)
+            ├─ Gemini AI (carbon estimation)
+            └─ Firebase Firestore (global cache, leaderboard, user sync)
+```
 
-## Features
-
-- **Multi-Layered Product Discovery:** A robust, automated pipeline that integrates verified environmental databases, community caching, and generative AI to identify products and calculate carbon impact.
-- **User-Assisted Identification:** An interactive fallback mechanism allowing users to provide product descriptions to guide the AI when a barcode is not found in structured databases.
-- **Environmental Impact Statistics:** Comprehensive tracking of daily and weekly carbon footprint totals, visualized through interactive analytical charts.
-- **Product History:** Local persistence of scanned items with cross-device cloud synchronization and atomic transactions for data integrity.
-- **Global Leaderboard:** Real-time competitive ranking system allowing users to compare their environmental contribution with the global community.
-- **Gamification System:** Engagement features including nature-themed eco-ranks (Seedling to Forest Guardian), milestone badges, and performance accomplishments.
-- **Product Comparison:** Easily compare the carbon footprint of multiple products to make actively eco-friendly choices.
-- **Secure Authentication:** Firebase-powered authentication for data persistence and secure user profiles.
-
-## Technologies Used
-
-- **Language:** Kotlin
-- **Architecture:** MVVM (Model-View-ViewModel)
-- **AI Integration:** Google Gemini AI (Generative AI SDK)
-- **UI & Layouts:** XML Layouts, ViewBinding, Material Design 3
-- **Dependency Injection:** Dagger Hilt
-- **Local Database:** Room
-- **Cloud Infrastructure:** Firebase Firestore, Firebase Authentication
-- **Networking:** Retrofit, OkHttp
-- **Asynchrony:** Kotlin Coroutines, Flow
-- **Barcode Scanning:** ZXing Android Embedded
-- **Charts:** MPAndroidChart
-- **Image Loading:** Glide
-- **Navigation:** Jetpack Navigation Component
-
-## Project Structure
+### Package layout
 
 ```
 com.ecotracker/
 ├── data/
-│   ├── local/          # Room database entities and DAOs
-│   ├── remote/         # Retrofit API services, Gemini AI integration, and models
-│   └── repository/     # Centralized data access with discovery waterfall logic
-├── di/                 # Dagger Hilt module configurations
+│   ├── local/          Room entities, DAO, type converters
+│   ├── model/          Shared data classes (LeaderboardUser)
+│   ├── remote/         Retrofit services, Gemini AI, API models
+│   └── repository/     EcoTrackerRepository
+├── di/                 Hilt AppModule
 ├── ui/
-│   ├── achievements/   # Achievement badges and gamification unlocking UI
-│   ├── auth/           # Login and registration fragments
-│   ├── comparison/     # Carbon footprint product comparison UI
-│   ├── history/        # Scanned product history list
-│   ├── leaderboard/    # Global user rankings
-│   ├── main/           # MainActivity and navigation setup
-│   ├── manual/         # Manual product entry
-│   ├── profile/        # User profile and leveling data
-│   ├── quests/         # Gamification quests UI
-│   ├── scan/           # Camera barcode scanner and AI feedback UI
-│   └── statistics/     # Environmental impact charts
-└── utils/              # Helper extensions, constants, and carbon calculations
+│   ├── achievements/   Badge grid
+│   ├── auth/           Login, Register, Username setup
+│   ├── comparison/     Side-by-side carbon comparison
+│   ├── history/        Scanned product list
+│   ├── leaderboard/    Global rankings
+│   ├── main/           MainActivity, navigation
+│   ├── manual/         Manual product entry fallback
+│   ├── profile/        User profile, rank, badges preview
+│   ├── quests/         Gamification quests
+│   ├── scan/           Camera scanner, product result card
+│   └── statistics/     Charts, daily/weekly carbon totals
+└── utils/
+    ├── AppConfig.kt    Centralized constants
+    ├── CarbonCalculator.kt
+    ├── Extensions.kt   View/date/color helpers
+    ├── GamificationEngine.kt
+    ├── Logger.kt       Release-safe logging
+    └── Resource.kt     Sealed result wrapper
 ```
 
-## Product Discovery & CO₂e Estimation Pipeline
+## Data Flow
 
-EcoTracker employs a structured, multi-step pipeline to ensure high coverage and accuracy in product identification and carbon footprint estimation. The system prioritizes verified data before utilizing AI-based heuristics.
+### Barcode lookup waterfall
 
-1.  **Verified Database Lookup:** The application first queries Open Food Facts and Open Beauty Facts. These are the primary sources for verified product information, ecological scores, and carbon footprint data.
-2.  **Global Community Cache (with TTL):** If the product is not in the primary databases, the system checks a global Firestore-based cache. This cache features a **90-day TTL (Time-to-Live)** policy to ensure environmental data remains current.
-3.  **Supplementary Metadata Retrieval:** If the barcode is still unrecognized, EcoTracker uses UPCitemdb to retrieve technical product titles and categories.
-4.  **Categorical AI Estimation:** Google Gemini AI analyzes the retrieved metadata using structured prompt engineering to generate a high-confidence CO₂e estimate.
-5.  **Heuristic AI Fallback & Idempotency:** In cases of no metadata, the AI fallback is used. The entire pipeline is **idempotent**, ensuring exactly-once processing for every scan even during network retries.
+When a barcode is scanned, the repository checks sources in this order:
 
-## Prerequisites
+1. **Local Room cache** — ScanViewModel checks DAO first (`getProductByBarcode`). If found, skips network entirely.
+2. **OpenFoodFacts** — Primary API. If product found but lacks carbon data, Gemini AI estimates it.
+3. **OpenBeautyFacts** — Parallel with OFF. Covers cosmetics/personal care.
+4. **Global Firestore cache** — Community-shared results with a configurable TTL (default 90 days via `AppConfig.CACHE_TTL_DAYS`).
+5. **UPCitemdb + Gemini** — Retrieves product metadata, then Gemini estimates carbon from the title/category.
+6. **User input fallback** — If all sources fail, the user is prompted to describe the product. Gemini uses the hint to identify and estimate.
 
-- Android Studio (Hedgehog 2023.1.1 or newer)
+Steps 1-3 run in parallel. Steps 4-6 run sequentially as fallbacks.
+
+### Save flow
+
+`saveProduct` writes to Room first, then syncs to Firestore inside a transaction. The transaction uses a deterministic document ID (`barcode_timestamp`) to prevent duplicate writes on retry. If Firestore fails, the local save still succeeds.
+
+## Setup
+
+### Prerequisites
+
+- Android Studio (Hedgehog 2023.1.1+)
 - JDK 17
-- Android SDK (API level 24 or higher)
+- Android SDK API 24+
 
+### Gemini API
 
-## External Services
+1. Get an API key from [Google AI Studio](https://aistudio.google.com/apikey).
+2. Copy `local.properties.example` to `local.properties`.
+3. Add: `GEMINI_API_KEY=your_key_here`
 
-- **Google Gemini AI:** Performs categorical analysis and best-effort carbon footprint estimation when structured data is unavailable.
-- **Open Food Facts / Open Beauty Facts:** Primary APIs for retrieving verified environmental and nutritional information.
-- **UPCitemdb:** Provides supplementary product metadata (titles and categories) for unrecognized barcodes.
-- **Firebase Firestore:** Facilitates the global product cache and synchronizes user progress across devices.
-- **Firebase Authentication:** Handles secure user identity management and data protection.
+### Firebase
 
-## Purpose
+1. Create a project at [Firebase Console](https://console.firebase.google.com/).
+2. Add an Android app with package name `com.ecotracker`.
+3. Download `google-services.json` and place it in the `app/` directory.
+4. Enable **Authentication** (Email/Password).
+5. Enable **Cloud Firestore**.
 
-This project explores the intersection of mobile development, generative AI, and environmental awareness, providing a robust tool for consumers to understand and minimize their carbon footprint.
+> **Do not commit `google-services.json` or `local.properties` to version control.**  
+> Both are listed in `.gitignore`.
+
+### Build and run
+
+```bash
+./gradlew assembleDebug
+```
+
+Or open in Android Studio and run on a device/emulator with camera access.
+
+## Testing
+
+### Run unit tests
+
+```bash
+./gradlew test
+```
+
+### Test coverage
+
+- `CarbonCalculatorTest` — All 4 estimation tiers (Agribalyse, nutriments, category map, eco-score grade), format(), hasRealCarbonData().
+- `GamificationEngineTest` — Rank boundaries (Seedling through Forest Guardian), all badge unlock conditions.
+- `AppConfigTest` — TTL calculation consistency, username regex validation.
+- `EcoTrackerRepositoryTest` — Barcode lookup priority order, API exception handling, local DAO save, duplicate scan prevention.
+
+### What the tests use
+
+- JUnit 4
+- MockK for mocking Retrofit services and Room DAO
+- kotlinx-coroutines-test for `runTest`
+
+## Configuration
+
+All magic numbers live in `AppConfig.kt`:
+
+| Constant | Default | Purpose |
+|---|---|---|
+| `CACHE_TTL_DAYS` | 90 | Global Firestore cache expiry |
+| `NETWORK_CONNECT_TIMEOUT_SECONDS` | 60 | OkHttp connect timeout |
+| `NETWORK_READ_TIMEOUT_SECONDS` | 60 | OkHttp read timeout |
+| `LEADERBOARD_MAX_SIZE` | 20 | Firestore query limit |
+| `USERNAME_MAX_LENGTH` | 24 | Max characters for usernames |
+| `BARCODE_VISIBLE_PREFIX` | 4 | Characters shown in logs |
+
+## Logging
+
+`Logger.kt` wraps `android.util.Log`:
+
+- `Logger.debug()` — suppressed in release builds
+- `Logger.error()` — always active
+- `Logger.maskBarcode()` — shows only first 4 characters
+- HTTP body logging is disabled in release builds (OkHttp interceptor level set to `NONE`)
+
+## Roadmap
+
+- Offline mode with queued Firestore sync
+- Product detail screen with full AI reasoning breakdown
+- Category-level statistics (food vs cosmetics vs electronics)
+- Export scan history as CSV
+- Dark mode support
+- Instrumented UI tests with Espresso

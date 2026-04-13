@@ -33,10 +33,16 @@ class UsernameFragment : Fragment() {
         firestore = FirebaseFirestore.getInstance()
 
         binding.btnSave.setOnClickListener {
-            val username = binding.etUsername.text.toString().trim()
+            val rawUsername = binding.etUsername.text.toString().trim()
+            val username = rawUsername.replace(Regex("[^a-zA-Z0-9_ \\-]"), "")
 
             if (username.isEmpty()) {
                 Toast.makeText(context, "Please enter a username", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (username.length > com.ecotracker.utils.AppConfig.USERNAME_MAX_LENGTH) {
+                Toast.makeText(context, "Username must be ${com.ecotracker.utils.AppConfig.USERNAME_MAX_LENGTH} characters or less", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 

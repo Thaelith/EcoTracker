@@ -2,11 +2,13 @@ package com.ecotracker.di
 
 import android.content.Context
 import androidx.room.Room
+import com.ecotracker.BuildConfig
 import com.ecotracker.data.local.EcoTrackerDatabase
 import com.ecotracker.data.local.ScannedProductDao
 import com.ecotracker.data.remote.OpenBeautyFactsApiService
 import com.ecotracker.data.remote.OpenFoodFactsApiService
 import com.ecotracker.data.remote.UPCItemDbApiService
+import com.ecotracker.utils.AppConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,19 +25,23 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    // ── Network ───────────────────────────────────────────────────────────────
+    // -- Network ----------------------------------------------------------------
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient =
-        OkHttpClient.Builder()
+    fun provideOkHttpClient(): OkHttpClient {
+        val loggingLevel = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BASIC
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
+
+        return OkHttpClient.Builder()
             .addInterceptor(
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                }
+                HttpLoggingInterceptor().apply { level = loggingLevel }
             )
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(AppConfig.NETWORK_CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(AppConfig.NETWORK_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("User-Agent", "EcoTracker/1.0 (Android)")
@@ -43,6 +49,7 @@ object AppModule {
                 chain.proceed(request)
             }
             .build()
+    }
 
     @Provides
     @Singleton
@@ -74,7 +81,7 @@ object AppModule {
             .build()
             .create(OpenBeautyFactsApiService::class.java)
 
-    // ── Database ──────────────────────────────────────────────────────────────
+    // -- Database ---------------------------------------------------------------
 
     @Provides
     @Singleton

@@ -52,19 +52,30 @@ class ProfileFragment : Fragment() {
 
     private fun setupUserData() {
         val user = auth.currentUser
-        if (user != null) {
-            binding.tvEmail.text = user.email
+        if (user == null) {
+            binding.tvEmail.text = "Not signed in"
+            binding.tvUsername.text = "—"
+            return
+        }
 
-            firestore.collection("users").document(user.uid).get()
-                .addOnSuccessListener { document ->
-                    if (document != null && document.exists()) {
-                        val username = document.getString("username")
-                        if (username != null) {
-                            binding.tvUsername.text = username
-                        }
+        binding.tvEmail.text = user.email ?: "—"
+
+        firestore.collection("users").document(user.uid).get()
+            .addOnSuccessListener { document ->
+                val b = _binding ?: return@addOnSuccessListener
+                if (document != null && document.exists()) {
+                    val rawUsername = document.getString("username")
+                    if (!rawUsername.isNullOrBlank()) {
+                        b.tvUsername.text = rawUsername
+                            .replace(Regex("[^a-zA-Z0-9_ \\-]"), "")
+                            .take(com.ecotracker.utils.AppConfig.USERNAME_MAX_LENGTH)
                     }
                 }
-        }
+            }
+            .addOnFailureListener {
+                val b = _binding ?: return@addOnFailureListener
+                b.tvUsername.text = "—"
+            }
     }
 
     private fun observeGamification() {

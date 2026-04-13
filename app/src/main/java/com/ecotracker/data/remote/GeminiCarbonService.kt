@@ -3,13 +3,11 @@ package com.ecotracker.data.remote
 import com.ecotracker.BuildConfig
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.ScannedProduct
+import com.ecotracker.utils.Logger
 import com.google.ai.client.generativeai.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * Service responsible for asking Gemini to estimate the carbon footprint of an unknown product.
- */
 /**
  * Structured analysis result from Gemini.
  */
@@ -32,19 +30,19 @@ object GeminiCarbonService {
         )
     }
 
-    private const val LOG_TAG = "CarbonService"
+    private const val TAG = "GeminiService"
 
     /**
      * Prompts the LLM to estimate a carbon footprint with full metadata.
      */
     suspend fun estimateCarbonFootprint(productTitle: String, category: String?, quantity: String? = null): GeminiAnalysis? {
-        android.util.Log.d(LOG_TAG, "Called with title='$productTitle', category='$category', quantity='$quantity'")
-        
+        Logger.debug(TAG, "Estimating footprint for '$productTitle'")
+
         if (apiKey.isBlank()) {
-            android.util.Log.e(LOG_TAG, "API Key is BLANK! Check local.properties.")
+            Logger.error(TAG, "Gemini API key is not configured")
             return null
         }
-        
+
         return withContext(Dispatchers.IO) {
             try {
                 val catStr = if (!category.isNullOrBlank()) "It belongs to the category: $category." else ""
@@ -65,19 +63,18 @@ object GeminiCarbonService {
                   Do not include markdown formatting or any text outside the JSON.
                 """.trimIndent()
 
-                android.util.Log.d(LOG_TAG, "Fetching estimation...")
+                Logger.debug(TAG, "Fetching estimation...")
                 val response = generativeModel.generateContent(prompt)
                 val text = response.text?.replace("```json", "")?.replace("```", "")?.trim()
-                
+
                 if (text.isNullOrBlank()) return@withContext null
 
                 val json = com.google.gson.JsonParser.parseString(text).asJsonObject
-                
-                // Safer field extraction
-                fun getString(key: String, default: String) = json.get(key)?.let { 
-                    if (it.isJsonPrimitive) it.asString else default 
+
+                fun getString(key: String, default: String) = json.get(key)?.let {
+                    if (it.isJsonPrimitive) it.asString else default
                 } ?: default
-                
+
                 fun getDouble(key: String): Double? = json.get(key)?.let {
                     if (it.isJsonPrimitive && (it.asJsonPrimitive.isNumber || it.asJsonPrimitive.isString)) {
                         try { it.asDouble } catch (e: Exception) { null }
@@ -91,10 +88,10 @@ object GeminiCarbonService {
                     confidence = getString("confidence", "Unknown"),
                     dataQuality = getString("data_quality_flag", "Expert Estimate")
                 ).also {
-                    android.util.Log.d(LOG_TAG, "Analysis Complete: $it")
+                    Logger.debug(TAG, "Analysis complete: category=${it.estimatedCategory}, co2e=${it.kgCo2e}")
                 }
             } catch (e: Exception) {
-                android.util.Log.e(LOG_TAG, "Error during analysis: ${e.message}")
+                Logger.error(TAG, "Estimation failed: ${e.javaClass.simpleName}", e)
                 null
             }
         }
@@ -104,10 +101,11 @@ object GeminiCarbonService {
      * Prompts the LLM to identify a product using its barcode and a helpful hint from the user.
      */
     suspend fun identifyProductWithUserHint(barcode: String, userHint: String): ScannedProduct? {
-        android.util.Log.d(LOG_TAG, "Identifying masked barcode='${barcode.take(4)}...' with user description")
-        
+        val masked = Logger.maskBarcode(barcode)
+        Logger.debug(TAG, "Identifying $masked with user description")
+
         if (apiKey.isBlank()) return null
-        
+
         return withContext(Dispatchers.IO) {
             try {
                 val prompt = """
@@ -127,19 +125,18 @@ object GeminiCarbonService {
                   Do not include markdown formatting or any text outside the JSON.
                 """.trimIndent()
 
-                android.util.Log.d(LOG_TAG, "Querying service for barcode identification...")
+                Logger.debug(TAG, "Querying for barcode identification...")
                 val response = generativeModel.generateContent(prompt)
                 val text = response.text?.replace("```json", "")?.replace("```", "")?.trim()
-                
+
                 if (text.isNullOrBlank()) return@withContext null
 
                 val json = com.google.gson.JsonParser.parseString(text).asJsonObject
-                
-                // Safer field extraction
-                fun getString(key: String, default: String) = json.get(key)?.let { 
-                    if (it.isJsonPrimitive) it.asString else default 
+
+                fun getString(key: String, default: String) = json.get(key)?.let {
+                    if (it.isJsonPrimitive) it.asString else default
                 } ?: default
-                
+
                 fun getDouble(key: String): Double? = json.get(key)?.let {
                     if (it.isJsonPrimitive && (it.asJsonPrimitive.isNumber || it.asJsonPrimitive.isString)) {
                         try { it.asDouble } catch (e: Exception) { null }
@@ -160,10 +157,10 @@ object GeminiCarbonService {
                     aiConfidence = getString("confidence", "Medium"),
                     aiDataQuality = getString("data_quality_flag", "User-Assisted Estimate")
                 ).also {
-                    android.util.Log.d(LOG_TAG, "Identification Successful: ${it.productName}")
+                    Logger.debug(TAG, "Identification successful: ${it.productName}")
                 }
             } catch (e: Exception) {
-                android.util.Log.e(LOG_TAG, "Identification failed: ${e.message}")
+                Logger.error(TAG, "Identification failed: ${e.javaClass.simpleName}", e)
                 null
             }
         }

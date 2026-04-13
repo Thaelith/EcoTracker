@@ -82,7 +82,7 @@ class ScanViewModel @Inject constructor(
     }
 
     fun onProductSavedToastShown() {
-        _savedState.value = false
+        _savedState.value = null
     }
 
     fun resetState() {

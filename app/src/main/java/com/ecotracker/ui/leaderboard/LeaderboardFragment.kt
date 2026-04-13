@@ -67,7 +67,12 @@ class LeaderboardFragment : Fragment() {
                         is Resource.Error -> {
                             binding.swipeRefresh.isRefreshing = false
                             binding.progressBar.visibility = View.GONE
-                            // In a real app, show a snackbar or toast
+                            binding.emptyState.visibility = View.VISIBLE
+                            com.google.android.material.snackbar.Snackbar.make(
+                                binding.root,
+                                resource.message,
+                                com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                            ).show()
                         }
                         is Resource.Loading -> {
                             if (!binding.swipeRefresh.isRefreshing) {

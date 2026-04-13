@@ -98,7 +98,11 @@ class ScanFragment : Fragment() {
                 }
                 is Resource.Error -> {
                     showLoading(false)
-                    requireContext().toast(state.message)
+                    com.google.android.material.snackbar.Snackbar.make(
+                        binding.root,
+                        state.message,
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                    ).show()
                 }
                 is Resource.NeedsInput -> {
                     showLoading(false)

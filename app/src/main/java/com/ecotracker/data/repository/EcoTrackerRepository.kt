@@ -6,6 +6,8 @@ import com.ecotracker.data.local.ScannedProductDao
 import com.ecotracker.data.remote.OpenBeautyFactsApiService
 import com.ecotracker.data.remote.OpenFoodFactsApiService
 import com.ecotracker.data.remote.UPCItemDbApiService
+import com.ecotracker.utils.AppConfig
+import com.ecotracker.utils.Logger
 import com.ecotracker.utils.Resource
 import com.ecotracker.utils.CarbonCalculator
 import com.ecotracker.utils.toScannedProduct
@@ -18,8 +20,10 @@ import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import java.net.UnknownHostException
+import java.net.SocketTimeoutException
 
 @Singleton
 class EcoTrackerRepository @Inject constructor(
@@ -28,53 +32,68 @@ class EcoTrackerRepository @Inject constructor(
     private val upcApi: UPCItemDbApiService,
     private val dao: ScannedProductDao
 ) {
+    companion object {
+        private const val TAG = "EcoRepo"
+    }
+
     suspend fun fetchProductByBarcode(barcode: String): Resource<ScannedProduct> = coroutineScope {
-        android.util.Log.d("EcoRepo", "=== Starting parallel lookup for barcode: ${barcode.take(4)}... ===")
-        
+        val masked = Logger.maskBarcode(barcode)
+        Logger.debug(TAG, "Starting parallel lookup for $masked")
+
         val offDeferred = async { tryOpenFoodFacts(barcode) }
         val obfDeferred = async { tryOpenBeautyFacts(barcode) }
         val cacheDeferred = async { checkGlobalCache(barcode) }
 
         val offResult = offDeferred.await()
         if (offResult != null) {
-            android.util.Log.d("EcoRepo", "Found via OpenFoodFacts")
+            Logger.debug(TAG, "Found via OpenFoodFacts")
             return@coroutineScope Resource.Success(offResult)
         }
 
         val obfResult = obfDeferred.await()
         if (obfResult != null) {
-            android.util.Log.d("EcoRepo", "Found via OpenBeautyFacts")
+            Logger.debug(TAG, "Found via OpenBeautyFacts")
             return@coroutineScope Resource.Success(obfResult)
         }
-        
+
         val cacheResult = cacheDeferred.await()
         if (cacheResult != null) {
-            android.util.Log.d("EcoRepo", "Found in Global Cache")
+            Logger.debug(TAG, "Found in global cache")
             return@coroutineScope Resource.Success(cacheResult)
         }
 
         val upcResult = tryUPCItemDbAndGemini(barcode)
         if (upcResult != null) {
-            android.util.Log.d("EcoRepo", "Found via UPCitemdb and Estimation Service")
+            Logger.debug(TAG, "Found via UPCitemdb + Gemini")
             return@coroutineScope Resource.Success(upcResult)
         }
 
-        android.util.Log.d("EcoRepo", "[Final] All databases/AI failed. Requesting user input for masked barcode ${barcode.take(4)}...")
+        Logger.debug(TAG, "All sources exhausted for $masked, requesting user input")
         Resource.NeedsInput(barcode)
     }
 
     suspend fun estimateWithUserPrompt(barcode: String, userHint: String): Resource<ScannedProduct> {
-        android.util.Log.d("EcoRepo", "User provided description for masked barcode ${barcode.take(4)}")
-        val aiGuessResult = com.ecotracker.data.remote.GeminiCarbonService.identifyProductWithUserHint(barcode, userHint)
-        
-        if (aiGuessResult != null) {
-            android.util.Log.d("EcoRepo", "Found via User-Assisted Fallback")
-            val stampedResult = aiGuessResult.copy(status = EstimationStatus.AI_ESTIMATED)
-            cacheProductGlobally(stampedResult)
-            return Resource.Success(stampedResult)
+        val masked = Logger.maskBarcode(barcode)
+        Logger.debug(TAG, "User provided description for $masked")
+        return try {
+            val aiGuessResult = com.ecotracker.data.remote.GeminiCarbonService.identifyProductWithUserHint(barcode, userHint)
+
+            if (aiGuessResult != null) {
+                Logger.debug(TAG, "User-assisted identification succeeded")
+                val stampedResult = aiGuessResult.copy(status = EstimationStatus.AI_ESTIMATED)
+                cacheProductGlobally(stampedResult)
+                Resource.Success(stampedResult)
+            } else {
+                Resource.Error("Could not identify the product from your description. Try adding more detail.")
+            }
+        } catch (e: UnknownHostException) {
+            Resource.Error("No internet connection. Check your network and try again.")
+        } catch (e: SocketTimeoutException) {
+            Resource.Error("Request timed out. Please try again.")
+        } catch (e: Exception) {
+            Logger.error(TAG, "User-assisted estimation failed", e)
+            Resource.Error("Something went wrong. Please try again.")
         }
-        
-        return Resource.Error("AI couldn't estimate the product from the hint.", barcode)
     }
 
     private suspend fun tryOpenFoodFacts(barcode: String): ScannedProduct? {
@@ -83,17 +102,17 @@ class EcoTrackerRepository @Inject constructor(
             if (r.isSuccessful && r.body()?.status == 1 && r.body()?.product != null) {
                 val productDto = r.body()!!.product!!
                 val baseProduct = productDto.toScannedProduct(barcode)
-                
+
                 if (CarbonCalculator.hasRealCarbonData(productDto)) {
                     return baseProduct
                 }
-                
-                val quantity = productDto.quantity?.takeIf { it.isNotBlank() } 
+
+                val quantity = productDto.quantity?.takeIf { it.isNotBlank() }
                     ?: productDto.productQuantity?.let { "${it.toInt()}ml" }
                 val analysis = com.ecotracker.data.remote.GeminiCarbonService.estimateCarbonFootprint(
                     baseProduct.productName, baseProduct.categories, quantity
                 )
-                
+
                 if (analysis != null) {
                     val enhanced = baseProduct.copy(
                         carbonFootprint = analysis.kgCo2e,
@@ -106,10 +125,13 @@ class EcoTrackerRepository @Inject constructor(
                     cacheProductGlobally(enhanced)
                     return enhanced
                 }
-                
+
                 baseProduct
             } else null
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            Logger.debug(TAG, "OpenFoodFacts lookup failed: ${e.javaClass.simpleName}")
+            null
+        }
     }
 
     private suspend fun tryOpenBeautyFacts(barcode: String): ScannedProduct? {
@@ -118,20 +140,22 @@ class EcoTrackerRepository @Inject constructor(
             if (r.isSuccessful && r.body()?.status == 1 && r.body()?.product != null)
                 r.body()!!.product!!.toScannedProduct(barcode)
             else null
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            Logger.debug(TAG, "OpenBeautyFacts lookup failed: ${e.javaClass.simpleName}")
+            null
+        }
     }
-    
+
     private suspend fun checkGlobalCache(barcode: String): ScannedProduct? {
         return try {
             val db = FirebaseFirestore.getInstance()
             val doc = db.collection("global_products").document(barcode).get().await()
             if (doc.exists()) {
                 val cachedAt = doc.getLong("cachedAt") ?: 0L
-                val lifespan = System.currentTimeMillis() - cachedAt
-                val ninetyDaysMillis = 90L * 24 * 60 * 60 * 1000L
-                
-                if (lifespan > ninetyDaysMillis) {
-                    android.util.Log.d("EcoRepo", "Global cache hit is STALE (> 90 days). Ignoring.")
+                val age = System.currentTimeMillis() - cachedAt
+
+                if (age > AppConfig.CACHE_TTL_MILLIS) {
+                    Logger.debug(TAG, "Global cache hit is stale (>${AppConfig.CACHE_TTL_DAYS} days), ignoring")
                     return null
                 }
 
@@ -142,7 +166,7 @@ class EcoTrackerRepository @Inject constructor(
                     ecoScore       = "AI Forecast",
                     ecoScoreValue  = 0,
                     carbonFootprint = doc.getDouble("carbonFootprint"),
-                    status         = try { EstimationStatus.valueOf(doc.getString("status") ?: "CATEGORY_AVERAGE") } catch(e: Exception) { EstimationStatus.CATEGORY_AVERAGE },
+                    status         = try { EstimationStatus.valueOf(doc.getString("status") ?: "CATEGORY_AVERAGE") } catch (e: Exception) { EstimationStatus.CATEGORY_AVERAGE },
                     imageUrl       = doc.getString("imageUrl") ?: "",
                     categories     = doc.getString("category") ?: "",
                     aiReasoning    = doc.getString("aiReasoning"),
@@ -150,7 +174,10 @@ class EcoTrackerRepository @Inject constructor(
                     aiDataQuality  = doc.getString("aiDataQuality")
                 )
             } else null
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            Logger.debug(TAG, "Global cache check failed: ${e.javaClass.simpleName}")
+            null
+        }
     }
 
     private suspend fun tryUPCItemDbAndGemini(barcode: String): ScannedProduct? {
@@ -159,7 +186,7 @@ class EcoTrackerRepository @Inject constructor(
             if (r.isSuccessful) {
                 val item = r.body()?.items?.firstOrNull() ?: return null
                 val title = item.title ?: return null
-                
+
                 val analysis = com.ecotracker.data.remote.GeminiCarbonService.estimateCarbonFootprint(title, item.category)
                 val generatedProduct = ScannedProduct(
                     barcode        = barcode,
@@ -175,19 +202,19 @@ class EcoTrackerRepository @Inject constructor(
                     aiConfidence   = analysis?.confidence,
                     aiDataQuality  = analysis?.dataQuality
                 )
-                
+
                 cacheProductGlobally(generatedProduct)
                 generatedProduct
             } else {
-                android.util.Log.d("EcoRepo", "[4/4] UPC: request failed with code ${r.code()}")
+                Logger.debug(TAG, "UPC request failed with code ${r.code()}")
                 null
             }
         } catch (e: Exception) {
-            android.util.Log.e("EcoRepo", "[4/4] UPC EXCEPTION: ${e.javaClass.simpleName}: ${e.message}")
+            Logger.error(TAG, "UPC lookup exception: ${e.javaClass.simpleName}")
             null
         }
     }
-    
+
     private fun cacheProductGlobally(product: ScannedProduct) {
         try {
             val db = FirebaseFirestore.getInstance()
@@ -198,61 +225,68 @@ class EcoTrackerRepository @Inject constructor(
                 "category" to product.categories,
                 "imageUrl" to product.imageUrl,
                 "carbonFootprint" to product.carbonFootprint,
-                "status" to product.status.name, // Added status
+                "status" to product.status.name,
                 "aiReasoning" to product.aiReasoning,
                 "aiConfidence" to product.aiConfidence,
                 "aiDataQuality" to product.aiDataQuality,
                 "cachedAt" to System.currentTimeMillis()
             )
             db.collection("global_products").document(product.barcode).set(data)
-        } catch (e: Exception) { 
-            /* Silently drop cache failures */ 
+        } catch (e: Exception) {
+            Logger.error(TAG, "Failed to cache product globally", e)
         }
     }
 
-    // ── Local ─────────────────────────────────────────────────────────────────
+    // -- Local -------------------------------------------------------------------
 
     suspend fun saveProduct(product: ScannedProduct, remoteId: String): Long {
         val id = dao.insertProduct(product)
-        
-        // Sync with Firestore if logged in
+
         val firebaseUser = FirebaseAuth.getInstance().currentUser
         if (firebaseUser != null) {
-            val db = FirebaseFirestore.getInstance()
-            val userRef = db.collection("users").document(firebaseUser.uid)
-            val scanRef = userRef.collection("scans").document(remoteId)
-            
-            db.runTransaction { transaction ->
-                // 1. Check if this deterministic scan ID already exists (idempotency)
-                val scanDoc = transaction.get(scanRef)
-                if (!scanDoc.exists()) {
-                    // 2. Add scan history
-                    val scanData = hashMapOf(
-                        "barcode" to product.barcode,
-                        "productName" to product.productName,
-                        "carbonFootprint" to product.carbonFootprint,
-                        "status" to product.status.name,
-                        "timestamp" to product.timestamp
-                    )
-                    transaction.set(scanRef, scanData)
-                    
-                    // 3. Increment counters
-                    val updates = mutableMapOf<String, Any>(
-                        "scanCount" to FieldValue.increment(1)
-                    )
-                    
-                    product.carbonFootprint?.let { carbon ->
-                        if (carbon > 0.0) {
-                            updates["co2e"] = FieldValue.increment(carbon)
+            try {
+                val db = FirebaseFirestore.getInstance()
+                val userRef = db.collection("users").document(firebaseUser.uid)
+                val scanRef = userRef.collection("scans").document(remoteId)
+
+                db.runTransaction { transaction ->
+                    val scanDoc = transaction.get(scanRef)
+                    if (!scanDoc.exists()) {
+                        val scanData = hashMapOf(
+                            "barcode" to product.barcode,
+                            "productName" to product.productName,
+                            "carbonFootprint" to product.carbonFootprint,
+                            "status" to product.status.name,
+                            "timestamp" to product.timestamp
+                        )
+                        transaction.set(scanRef, scanData)
+
+                        val updates = mutableMapOf<String, Any>(
+                            "scanCount" to FieldValue.increment(1)
+                        )
+
+                        product.carbonFootprint?.let { carbon ->
+                            if (carbon > 0.0) {
+                                updates["co2e"] = FieldValue.increment(carbon)
+                            }
                         }
+
+                        transaction.update(userRef, updates)
                     }
-                    
-                    transaction.update(userRef, updates)
-                }
-                null // Transaction requires a return value
-            }.await()
+                    null
+                }.await()
+            } catch (e: Exception) {
+                Logger.error(TAG, "Firestore sync failed during save", e)
+                // Local save still succeeded — don't throw
+            }
         }
         return id
+    }
+
+    /** Convenience overload used by ManualEntryViewModel (no remote sync ID). */
+    suspend fun saveProduct(product: ScannedProduct): Long {
+        val remoteId = "${product.barcode}_${product.timestamp}"
+        return saveProduct(product, remoteId)
     }
 
     suspend fun deleteProduct(product: ScannedProduct) = dao.deleteProduct(product)
@@ -274,23 +308,24 @@ class EcoTrackerRepository @Inject constructor(
 
     suspend fun deleteAllProducts() = dao.deleteAll()
 
-    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> = kotlinx.coroutines.flow.callbackFlow {
+    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> = callbackFlow {
         val db = FirebaseFirestore.getInstance()
         val listener = db.collection("users")
             .orderBy("scanCount", com.google.firebase.firestore.Query.Direction.DESCENDING)
-            .limit(20)
+            .limit(AppConfig.LEADERBOARD_MAX_SIZE)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(Resource.Error(error.message ?: "Unknown error"))
+                    trySend(Resource.Error(error.message ?: "Failed to load leaderboard"))
                     return@addSnapshotListener
                 }
 
                 if (snapshot != null) {
                     val users = snapshot.documents.mapIndexed { index, doc ->
+                        val rawUsername = doc.getString("username") ?: "Anonymous"
                         com.ecotracker.data.model.LeaderboardUser(
                             uid = doc.id,
                             rank = index + 1,
-                            username = doc.getString("username") ?: "Anonymous",
+                            username = sanitizeUsername(rawUsername),
                             scanCount = doc.getLong("scanCount")?.toInt() ?: 0,
                             co2e = doc.getDouble("co2e") ?: 0.0
                         )
@@ -299,5 +334,10 @@ class EcoTrackerRepository @Inject constructor(
                 }
             }
         awaitClose { listener.remove() }
+    }
+
+    /** Strip anything that isn't alphanumeric, space, underscore, or hyphen. */
+    private fun sanitizeUsername(raw: String): String {
+        return raw.replace(Regex("[^a-zA-Z0-9_ \\-]"), "").take(AppConfig.USERNAME_MAX_LENGTH).ifBlank { "Anonymous" }
     }
 }

@@ -61,7 +61,15 @@
     <!-- Leaderboard menu -->
     <string name="menu_leaderboard">Leaderboard</string>
     
+    <!-- Manual Entry -->
+    <string name="label_barcode_format">Barcode: %s</string>
+
     <!-- Feedback -->
     <string name="msg_save_success">Product saved to history!</string>
     <string name="error_save_failed">Failed to save product. Please try again.</string>
+    <string name="error_no_internet">No internet connection. Check your network and try again.</string>
+    <string name="error_timeout">Request timed out. Please try again.</string>
+    <string name="error_product_not_found">Product not found in any database.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
+    <string name="error_ai_failed">Could not identify the product. Try adding more detail.</string>
 </resources>
