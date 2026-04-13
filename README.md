@@ -22,7 +22,8 @@ EcoTracker is an Android application built to help users scan product barcodes a
 - **Multi-Layered Product Discovery:** A robust, automated pipeline that integrates verified environmental databases, community caching, and generative AI to identify products and calculate carbon impact.
 - **User-Assisted Identification:** An interactive fallback mechanism allowing users to provide product descriptions to guide the AI when a barcode is not found in structured databases.
 - **Environmental Impact Statistics:** Comprehensive tracking of daily and weekly carbon footprint totals, visualized through interactive analytical charts.
-- **Product History:** Local persistence of scanned items with cross-device cloud synchronization.
+- **Product History:** Local persistence of scanned items with cross-device cloud synchronization and atomic transactions for data integrity.
+- **Global Leaderboard:** Real-time competitive ranking system allowing users to compare their environmental contribution with the global community.
 - **Gamification System:** Engagement features including nature-themed eco-ranks (Seedling to Forest Guardian), milestone badges, and performance accomplishments.
 - **Product Comparison:** Easily compare the carbon footprint of multiple products to make actively eco-friendly choices.
 - **Secure Authentication:** Firebase-powered authentication for data persistence and secure user profiles.
@@ -72,10 +73,10 @@ com.ecotracker/
 EcoTracker employs a structured, multi-step pipeline to ensure high coverage and accuracy in product identification and carbon footprint estimation. The system prioritizes verified data before utilizing AI-based heuristics.
 
 1.  **Verified Database Lookup:** The application first queries Open Food Facts and Open Beauty Facts. These are the primary sources for verified product information, ecological scores, and carbon footprint data.
-2.  **Global Community Cache:** If the product is not in the primary databases, the system checks a global Firestore-based cache. This cache stores results from previous successful discoveries and AI estimations, enabling high-speed retrieval for common items.
-3.  **Supplementary Metadata Retrieval:** If the barcode is still unrecognized, EcoTracker uses UPCitemdb to retrieve technical product titles and categories. This metadata provides the necessary context for subsequent AI analysis.
-4.  **Categorical AI Estimation:** Google Gemini AI analyzes the retrieved product title and category. It maps the product to known environmental impact patterns and scientific data to generate a structured CO₂e estimate.
-5.  **Heuristic AI Fallback:** In cases where no structured data or metadata is available, the AI generates a best-effort estimate based on similar product types and known environmental impact factors, often guided by user-provided hints.
+2.  **Global Community Cache (with TTL):** If the product is not in the primary databases, the system checks a global Firestore-based cache. This cache features a **90-day TTL (Time-to-Live)** policy to ensure environmental data remains current.
+3.  **Supplementary Metadata Retrieval:** If the barcode is still unrecognized, EcoTracker uses UPCitemdb to retrieve technical product titles and categories.
+4.  **Categorical AI Estimation:** Google Gemini AI analyzes the retrieved metadata using structured prompt engineering to generate a high-confidence CO₂e estimate.
+5.  **Heuristic AI Fallback & Idempotency:** In cases of no metadata, the AI fallback is used. The entire pipeline is **idempotent**, ensuring exactly-once processing for every scan even during network retries.
 
 ## Prerequisites
 
