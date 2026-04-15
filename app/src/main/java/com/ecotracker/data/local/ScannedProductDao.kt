@@ -80,6 +80,27 @@ interface ScannedProductDao {
     @Query("SELECT COUNT(*) FROM scan_history")
     fun getTotalScannedCount(): Flow<Int>
 
+    @Query(
+        """
+        SELECT SUM(cp.carbonFootprint)
+        FROM scan_history sh
+        INNER JOIN cached_products cp ON cp.barcode = sh.barcode
+        """
+    )
+    fun getTotalCarbon(): Flow<Double?>
+
+    @Query("SELECT COUNT(*) FROM scan_history")
+    suspend fun getTotalScannedCountValue(): Int
+
+    @Query(
+        """
+        SELECT SUM(cp.carbonFootprint)
+        FROM scan_history sh
+        INNER JOIN cached_products cp ON cp.barcode = sh.barcode
+        """
+    )
+    suspend fun getTotalCarbonValue(): Double?
+
     @Query("SELECT * FROM cached_products WHERE barcode = :barcode LIMIT 1")
     suspend fun getCachedProductByBarcode(barcode: String): CachedProductEntity?
 

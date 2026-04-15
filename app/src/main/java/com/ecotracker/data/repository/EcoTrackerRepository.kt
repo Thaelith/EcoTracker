@@ -18,11 +18,14 @@ import com.ecotracker.utils.toScannedProduct
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -301,32 +304,15 @@ class EcoTrackerRepository @Inject constructor(
                 val userRef = firestore.collection("users").document(firebaseUser.uid)
                 val scanRef = userRef.collection("scans").document(remoteId)
 
-                firestore.runTransaction { transaction ->
-                    val scanDoc = transaction.get(scanRef)
-                    if (!scanDoc.exists()) {
-                        val scanData = hashMapOf(
-                            "barcode" to product.barcode,
-                            "productName" to product.productName,
-                            "carbonFootprint" to product.carbonFootprint,
-                            "status" to product.status.name,
-                            "timestamp" to product.timestamp
-                        )
-                        transaction.set(scanRef, scanData)
-
-                        val updates = mutableMapOf<String, Any>(
-                            "scanCount" to FieldValue.increment(1)
-                        )
-
-                        product.carbonFootprint?.let { carbon ->
-                            if (carbon > 0.0) {
-                                updates["co2e"] = FieldValue.increment(carbon)
-                            }
-                        }
-
-                        transaction.update(userRef, updates)
-                    }
-                    null
-                }.await()
+                val scanData = hashMapOf(
+                    "barcode" to product.barcode,
+                    "productName" to product.productName,
+                    "carbonFootprint" to product.carbonFootprint,
+                    "status" to product.status.name,
+                    "timestamp" to product.timestamp
+                )
+                scanRef.set(scanData, SetOptions.merge()).await()
+                syncCurrentUserStats(userRef)
             } catch (e: Exception) {
                 Logger.error(TAG, "Firestore sync failed during save", e)
             }
@@ -396,7 +382,35 @@ class EcoTrackerRepository @Inject constructor(
         dao.deleteAllCachedProducts()
     }
 
-    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> =
+    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> {
+        val remoteLeaderboard = observeRemoteLeaderboard()
+        val currentUserId = auth.currentUser?.uid ?: return remoteLeaderboard
+
+        return combine(
+            remoteLeaderboard,
+            dao.getTotalScannedCount(),
+            dao.getTotalCarbon()
+        ) { leaderboardResource, localScanCount, localCarbon ->
+            when (leaderboardResource) {
+                is Resource.Success -> {
+                    Resource.Success(
+                        overlayCurrentUserLeaderboardStats(
+                            users = leaderboardResource.data,
+                            currentUserId = currentUserId,
+                            localScanCount = localScanCount,
+                            localCarbon = localCarbon ?: 0.0
+                        )
+                    )
+                }
+
+                is Resource.Error -> leaderboardResource
+                is Resource.Loading -> leaderboardResource
+                is Resource.NeedsInput -> leaderboardResource
+            }
+        }
+    }
+
+    private fun observeRemoteLeaderboard(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> =
         callbackFlow {
             val listener = firestore.collection("users")
                 .orderBy("scanCount", com.google.firebase.firestore.Query.Direction.DESCENDING)
@@ -432,6 +446,49 @@ class EcoTrackerRepository @Inject constructor(
                 }
             awaitClose { listener.remove() }
         }
+
+    private fun overlayCurrentUserLeaderboardStats(
+        users: List<com.ecotracker.data.model.LeaderboardUser>,
+        currentUserId: String,
+        localScanCount: Int,
+        localCarbon: Double
+    ): List<com.ecotracker.data.model.LeaderboardUser> {
+        val adjustedUsers = users.map { user ->
+            if (user.uid == currentUserId) {
+                user.copy(
+                    scanCount = localScanCount,
+                    co2e = localCarbon
+                )
+            } else {
+                user
+            }
+        }
+
+        return adjustedUsers
+            .sortedWith(
+                compareByDescending<com.ecotracker.data.model.LeaderboardUser> { it.scanCount }
+                    .thenByDescending { it.co2e }
+                    .thenBy { it.username.lowercase() }
+            )
+            .mapIndexed { index, user -> user.copy(rank = index + 1) }
+    }
+
+    private suspend fun syncCurrentUserStats(userRef: com.google.firebase.firestore.DocumentReference) {
+        val scanCount = dao.getTotalScannedCountValue()
+        val totalCarbon = dao.getTotalCarbonValue() ?: 0.0
+        val stats = mutableMapOf<String, Any>(
+            "scanCount" to scanCount,
+            "co2e" to totalCarbon,
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+
+        val existingUser = userRef.get().await()
+        if (!existingUser.exists()) {
+            stats["createdAt"] = System.currentTimeMillis()
+        }
+
+        userRef.set(stats, SetOptions.merge()).await()
+    }
 
     private fun sanitizeUsername(raw: String): String {
         return raw.replace(Regex("[^a-zA-Z0-9_ \\-]"), "")
