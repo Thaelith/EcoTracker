@@ -7,6 +7,8 @@ import com.ecotracker.data.local.ScannedProductDao
 import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.remote.*
 import com.ecotracker.utils.Resource
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -20,6 +22,8 @@ class EcoTrackerRepositoryTest {
     private lateinit var beautyApi: OpenBeautyFactsApiService
     private lateinit var upcApi: UPCItemDbApiService
     private lateinit var dao: ScannedProductDao
+    private lateinit var auth: FirebaseAuth
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var repository: EcoTrackerRepository
 
     private val testBarcode = "3017620422003"
@@ -30,8 +34,13 @@ class EcoTrackerRepositoryTest {
         beautyApi = mockk()
         upcApi = mockk()
         dao = mockk(relaxed = true)
+        auth = mockk()
+        firestore = mockk()
 
-        repository = EcoTrackerRepository(foodApi, beautyApi, upcApi, dao)
+        every { auth.currentUser } returns null
+        every { firestore.collection(any()) } throws RuntimeException("Firestore disabled in unit test")
+
+        repository = EcoTrackerRepository(foodApi, beautyApi, upcApi, dao, auth, firestore)
     }
 
     private fun buildProductDto(name: String, ecoGrade: String? = "B"): ProductDto {
@@ -219,5 +228,26 @@ class EcoTrackerRepositoryTest {
 
         assertNotNull(result)
         assertEquals("Cached", result?.productName)
+    }
+
+    @Test
+    fun `deleteProductById deletes only scan history entry`() = runTest {
+        repository.deleteProductById(42L)
+
+        coVerify(exactly = 1) { dao.deleteScanHistoryById(42L) }
+        coVerify(exactly = 0) { dao.deleteAllCachedProducts() }
+    }
+
+    @Test
+    fun `deleteAllProducts clears scan history and cached products`() = runTest {
+        coEvery { dao.deleteAllScanHistory() } just Runs
+        coEvery { dao.deleteAllCachedProducts() } just Runs
+
+        repository.deleteAllProducts()
+
+        coVerifyOrder {
+            dao.deleteAllScanHistory()
+            dao.deleteAllCachedProducts()
+        }
     }
 }

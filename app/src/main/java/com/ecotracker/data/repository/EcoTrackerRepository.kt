@@ -4,6 +4,7 @@ import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.local.ScannedProductDao
 import com.ecotracker.data.local.ScanHistoryEntity
+import com.ecotracker.data.model.UserProfile
 import com.ecotracker.data.remote.OpenBeautyFactsApiService
 import com.ecotracker.data.remote.OpenFoodFactsApiService
 import com.ecotracker.data.remote.UPCItemDbApiService
@@ -32,7 +33,9 @@ class EcoTrackerRepository @Inject constructor(
     private val foodApi: OpenFoodFactsApiService,
     private val beautyApi: OpenBeautyFactsApiService,
     private val upcApi: UPCItemDbApiService,
-    private val dao: ScannedProductDao
+    private val dao: ScannedProductDao,
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) {
     companion object {
         private const val TAG = "EcoRepo"
@@ -162,8 +165,7 @@ class EcoTrackerRepository @Inject constructor(
 
     private suspend fun checkGlobalCache(barcode: String): ScannedProduct? {
         return try {
-            val db = FirebaseFirestore.getInstance()
-            val doc = db.collection("global_products").document(barcode).get().await()
+            val doc = firestore.collection("global_products").document(barcode).get().await()
             if (doc.exists()) {
                 val cachedAt = doc.getLong("cachedAt") ?: 0L
                 val age = System.currentTimeMillis() - cachedAt
@@ -231,7 +233,6 @@ class EcoTrackerRepository @Inject constructor(
 
     private fun cacheProductGlobally(product: ScannedProduct) {
         try {
-            val db = FirebaseFirestore.getInstance()
             val data = hashMapOf(
                 "barcode" to product.barcode,
                 "productName" to product.productName,
@@ -245,7 +246,7 @@ class EcoTrackerRepository @Inject constructor(
                 "aiDataQuality" to product.aiDataQuality,
                 "cachedAt" to System.currentTimeMillis()
             )
-            db.collection("global_products").document(product.barcode).set(data)
+            firestore.collection("global_products").document(product.barcode).set(data)
         } catch (e: Exception) {
             Logger.error(TAG, "Failed to cache product globally", e)
         }
@@ -263,18 +264,17 @@ class EcoTrackerRepository @Inject constructor(
         )
 
         val firebaseUser = try {
-            FirebaseAuth.getInstance().currentUser
+            auth.currentUser
         } catch (e: Exception) {
             Logger.error(TAG, "FirebaseAuth unavailable during save", e)
             null
         }
         if (firebaseUser != null) {
             try {
-                val db = FirebaseFirestore.getInstance()
-                val userRef = db.collection("users").document(firebaseUser.uid)
+                val userRef = firestore.collection("users").document(firebaseUser.uid)
                 val scanRef = userRef.collection("scans").document(remoteId)
 
-                db.runTransaction { transaction ->
+                firestore.runTransaction { transaction ->
                     val scanDoc = transaction.get(scanRef)
                     if (!scanDoc.exists()) {
                         val scanData = hashMapOf(
@@ -331,14 +331,33 @@ class EcoTrackerRepository @Inject constructor(
     suspend fun getProductByBarcode(barcode: String): ScannedProduct? =
         dao.getCachedProductByBarcode(barcode)?.toScannedProduct()
 
+    suspend fun getCurrentUserProfile(): UserProfile {
+        val currentUser = auth.currentUser ?: return UserProfile(
+            email = "Not signed in",
+            username = "—"
+        )
+
+        val username = try {
+            val document = firestore.collection("users").document(currentUser.uid).get().await()
+            sanitizeUsername(document.getString("username").orEmpty()).ifBlank { "—" }
+        } catch (e: Exception) {
+            Logger.debug(TAG, "Failed to load current user profile: ${e.javaClass.simpleName}")
+            "—"
+        }
+
+        return UserProfile(
+            email = currentUser.email ?: "—",
+            username = username
+        )
+    }
+
     suspend fun deleteAllProducts() {
         dao.deleteAllScanHistory()
         dao.deleteAllCachedProducts()
     }
 
     fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> = callbackFlow {
-        val db = FirebaseFirestore.getInstance()
-        val listener = db.collection("users")
+        val listener = firestore.collection("users")
             .orderBy("scanCount", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .limit(AppConfig.LEADERBOARD_MAX_SIZE)
             .addSnapshotListener { snapshot, error ->

@@ -5,24 +5,22 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
-import com.ecotracker.data.repository.EcoTrackerRepository
 import com.ecotracker.databinding.FragmentAchievementsBinding
-import com.ecotracker.utils.GamificationEngine
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class AchievementsFragment : Fragment() {
 
     private var _binding: FragmentAchievementsBinding? = null
     private val binding get() = _binding!!
-
-    @Inject
-    lateinit var repository: EcoTrackerRepository
+    private val viewModel: AchievementsViewModel by viewModels()
+    private val badgeAdapter = BadgeAdapter()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -34,13 +32,16 @@ class AchievementsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.rvAchievements.apply {
+            layoutManager = GridLayoutManager(requireContext(), 2)
+            adapter = badgeAdapter
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
-            val products = repository.getAllProducts().first()
-            val badges = GamificationEngine.getBadges(products)
-            
-            binding.rvAchievements.apply {
-                layoutManager = GridLayoutManager(requireContext(), 2)
-                adapter = BadgeAdapter(badges)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    badgeAdapter.submitBadges(state.badges)
+                }
             }
         }
     }
