@@ -9,6 +9,8 @@ import com.ecotracker.data.remote.OpenBeautyFactsApiService
 import com.ecotracker.data.remote.OpenFoodFactsApiService
 import com.ecotracker.data.remote.UPCItemDbApiService
 import com.ecotracker.utils.AppConfig
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -96,4 +98,12 @@ object AppModule {
     @Singleton
     fun provideScannedProductDao(db: EcoTrackerDatabase): ScannedProductDao =
         db.scannedProductDao()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 }

@@ -7,8 +7,10 @@ import com.ecotracker.R
 import com.ecotracker.databinding.ItemBadgeBinding
 import com.ecotracker.utils.Badge
 
-class BadgeAdapter(private val badges: List<Badge>) :
+class BadgeAdapter :
     RecyclerView.Adapter<BadgeAdapter.ViewHolder>() {
+
+    private val badges = mutableListOf<Badge>()
 
     class ViewHolder(private val binding: ItemBadgeBinding) :
         RecyclerView.ViewHolder(binding.root) {
@@ -47,4 +49,10 @@ class BadgeAdapter(private val badges: List<Badge>) :
     }
 
     override fun getItemCount(): Int = badges.size
+
+    fun submitBadges(items: List<Badge>) {
+        badges.clear()
+        badges.addAll(items)
+        notifyDataSetChanged()
+    }
 }
