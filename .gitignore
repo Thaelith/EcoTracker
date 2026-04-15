@@ -13,9 +13,12 @@ build/
 
 # Firebase & Secrets
 app/google-services.json
+serviceAccountKey.json
 *.jks
 *.keystore
-
+.env
+.env.*
+.firebase/
 # Tool Metadata
 .gemini/
 .kotlin/
