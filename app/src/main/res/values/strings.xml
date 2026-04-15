@@ -64,6 +64,12 @@
     <!-- Manual Entry -->
     <string name="label_barcode_format">Barcode: %s</string>
 
+    <!-- AI dialog -->
+    <string name="dialog_ai_title">Product Not Found</string>
+    <string name="dialog_ai_search_btn">Search with AI</string>
+    <string name="dialog_ai_empty_hint">Hint cannot be empty.</string>
+    <string name="dialog_ai_cancel_btn">Cancel</string>
+
     <!-- Feedback -->
     <string name="msg_save_success">Product saved to history!</string>
     <string name="error_save_failed">Failed to save product. Please try again.</string>

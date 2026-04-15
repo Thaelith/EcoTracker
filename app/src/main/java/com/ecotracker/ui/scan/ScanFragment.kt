@@ -155,18 +155,18 @@ class ScanFragment : Fragment() {
         val etHint = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etProductHint)
         
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Product Not Found")
+            .setTitle(getString(R.string.dialog_ai_title))
             .setIcon(R.drawable.ic_ai_stars)
             .setView(dialogView)
-            .setPositiveButton("Search with AI") { _, _ ->
+            .setPositiveButton(getString(R.string.dialog_ai_search_btn)) { _, _ ->
                 val hintText = etHint.text.toString().trim()
                 if (hintText.isNotEmpty()) {
                     viewModel.estimateWithUserInput(barcode, hintText)
                 } else {
-                    requireContext().toast("Hint cannot be empty.")
+                    requireContext().toast(getString(R.string.dialog_ai_empty_hint))
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.dialog_ai_cancel_btn), null)
             .show()
 
         // Auto-show keyboard

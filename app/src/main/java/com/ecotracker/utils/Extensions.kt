@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.View
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
+import com.ecotracker.data.local.CachedProductEntity
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.remote.ProductDto
@@ -67,6 +68,46 @@ fun ProductDto.toScannedProduct(barcode: String): ScannedProduct {
         status        = calc.status,
         imageUrl      = imageUrl ?: imageFrontUrl ?: "",
         categories    = categories ?: ""
+    )
+}
+
+fun ScannedProduct.toCachedProductEntity(updatedAt: Long = System.currentTimeMillis()): CachedProductEntity {
+    return CachedProductEntity(
+        barcode = barcode,
+        productName = productName,
+        brand = brand,
+        categories = categories,
+        imageUrl = imageUrl,
+        ecoScore = ecoScore,
+        ecoScoreValue = ecoScoreValue,
+        carbonFootprint = carbonFootprint,
+        status = status,
+        aiReasoning = aiReasoning,
+        aiConfidence = aiConfidence,
+        aiDataQuality = aiDataQuality,
+        updatedAt = updatedAt
+    )
+}
+
+fun CachedProductEntity.toScannedProduct(
+    id: Long = 0,
+    timestamp: Long = updatedAt
+): ScannedProduct {
+    return ScannedProduct(
+        id = id,
+        barcode = barcode,
+        productName = productName,
+        brand = brand,
+        categories = categories,
+        imageUrl = imageUrl,
+        ecoScore = ecoScore,
+        ecoScoreValue = ecoScoreValue,
+        carbonFootprint = carbonFootprint,
+        status = status,
+        aiReasoning = aiReasoning,
+        aiConfidence = aiConfidence,
+        aiDataQuality = aiDataQuality,
+        timestamp = timestamp
     )
 }
 

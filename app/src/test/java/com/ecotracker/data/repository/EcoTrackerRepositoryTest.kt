@@ -1,8 +1,10 @@
 package com.ecotracker.data.repository
 
 import com.ecotracker.data.local.EstimationStatus
+import com.ecotracker.data.local.CachedProductEntity
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.local.ScannedProductDao
+import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.remote.*
 import com.ecotracker.utils.Resource
 import io.mockk.*
@@ -132,12 +134,39 @@ class EcoTrackerRepositoryTest {
             carbonFootprint = 2.0,
             status = EstimationStatus.VERIFIED
         )
-        coEvery { dao.insertProduct(product) } returns 1L
+        coEvery { dao.upsertCachedProduct(any()) } just Runs
+        coEvery { dao.insertScanHistory(any()) } returns 1L
 
         val id = repository.saveProduct(product, "${product.barcode}_${product.timestamp}")
 
         assertEquals(1L, id)
-        coVerify(exactly = 1) { dao.insertProduct(product) }
+        coVerify(exactly = 1) {
+            dao.upsertCachedProduct(
+                CachedProductEntity(
+                    barcode = product.barcode,
+                    productName = product.productName,
+                    brand = product.brand,
+                    categories = product.categories,
+                    imageUrl = product.imageUrl,
+                    ecoScore = product.ecoScore,
+                    ecoScoreValue = product.ecoScoreValue,
+                    carbonFootprint = product.carbonFootprint,
+                    status = product.status,
+                    aiReasoning = product.aiReasoning,
+                    aiConfidence = product.aiConfidence,
+                    aiDataQuality = product.aiDataQuality,
+                    updatedAt = product.timestamp
+                )
+            )
+        }
+        coVerify(exactly = 1) {
+            dao.insertScanHistory(
+                ScanHistoryEntity(
+                    barcode = product.barcode,
+                    scannedAt = product.timestamp
+                )
+            )
+        }
     }
 
     @Test
@@ -154,17 +183,26 @@ class EcoTrackerRepositoryTest {
             status = EstimationStatus.VERIFIED,
             timestamp = 1000L
         )
-        coEvery { dao.insertProduct(product) } returns 1L
+        coEvery { dao.upsertCachedProduct(any()) } just Runs
+        coEvery { dao.insertScanHistory(any()) } returns 1L
 
         // Using the convenience overload
         repository.saveProduct(product)
 
-        coVerify(exactly = 1) { dao.insertProduct(product) }
+        coVerify(exactly = 1) { dao.upsertCachedProduct(any()) }
+        coVerify(exactly = 1) {
+            dao.insertScanHistory(
+                ScanHistoryEntity(
+                    barcode = product.barcode,
+                    scannedAt = product.timestamp
+                )
+            )
+        }
     }
 
     @Test
     fun `getProductByBarcode returns cached local product`() = runTest {
-        val cached = ScannedProduct(
+        val cached = CachedProductEntity(
             barcode = testBarcode,
             productName = "Cached",
             brand = "Brand",
@@ -175,7 +213,7 @@ class EcoTrackerRepositoryTest {
             carbonFootprint = 1.0,
             status = EstimationStatus.VERIFIED
         )
-        coEvery { dao.getProductByBarcode(testBarcode) } returns cached
+        coEvery { dao.getCachedProductByBarcode(testBarcode) } returns cached
 
         val result = repository.getProductByBarcode(testBarcode)
 

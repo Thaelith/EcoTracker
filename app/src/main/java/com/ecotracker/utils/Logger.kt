@@ -14,23 +14,25 @@ object Logger {
 
     fun debug(tag: String = DEFAULT_TAG, message: String) {
         if (BuildConfig.DEBUG) {
-            Log.d(tag, message)
+            runCatching { Log.d(tag, message) }
         }
     }
 
     fun info(tag: String = DEFAULT_TAG, message: String) {
-        Log.i(tag, message)
+        runCatching { Log.i(tag, message) }
     }
 
     fun warn(tag: String = DEFAULT_TAG, message: String) {
-        Log.w(tag, message)
+        runCatching { Log.w(tag, message) }
     }
 
     fun error(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        if (throwable != null) {
-            Log.e(tag, message, throwable)
-        } else {
-            Log.e(tag, message)
+        runCatching {
+            if (throwable != null) {
+                Log.e(tag, message, throwable)
+            } else {
+                Log.e(tag, message)
+            }
         }
     }
 

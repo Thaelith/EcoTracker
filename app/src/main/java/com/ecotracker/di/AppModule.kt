@@ -90,7 +90,7 @@ object AppModule {
             context,
             EcoTrackerDatabase::class.java,
             EcoTrackerDatabase.DATABASE_NAME
-        ).fallbackToDestructiveMigration().build()
+        ).addMigrations(EcoTrackerDatabase.MIGRATION_4_5).build()
 
     @Provides
     @Singleton

@@ -32,7 +32,7 @@ class ScanViewModel @Inject constructor(
         _scanState.value = Resource.Loading
         viewModelScope.launch {
             val cached = repository.getProductByBarcode(barcode)
-            if (cached != null) {
+            if (cached != null && !cached.isWeak()) {
                 _scanState.postValue(Resource.Success(cached))
                 return@launch
             }

@@ -23,4 +23,12 @@ data class ScannedProduct(
     val aiConfidence: String? = null,
     val aiDataQuality: String? = null,
     val timestamp: Long = System.currentTimeMillis()
-) : Parcelable
+) : Parcelable {
+    fun isWeak(): Boolean {
+        val isUnknown = productName.equals("Unknown Product", ignoreCase = true) || 
+                        productName.isBlank()
+        val hasNoCarbon = carbonFootprint == null || carbonFootprint == 0.0
+        
+        return isUnknown || (hasNoCarbon && status == EstimationStatus.NEEDS_ESTIMATION)
+    }
+}

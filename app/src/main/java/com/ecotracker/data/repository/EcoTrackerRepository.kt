@@ -3,6 +3,7 @@ package com.ecotracker.data.repository
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.local.ScannedProductDao
+import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.remote.OpenBeautyFactsApiService
 import com.ecotracker.data.remote.OpenFoodFactsApiService
 import com.ecotracker.data.remote.UPCItemDbApiService
@@ -10,6 +11,7 @@ import com.ecotracker.utils.AppConfig
 import com.ecotracker.utils.Logger
 import com.ecotracker.utils.Resource
 import com.ecotracker.utils.CarbonCalculator
+import com.ecotracker.utils.toCachedProductEntity
 import com.ecotracker.utils.toScannedProduct
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -45,27 +47,39 @@ class EcoTrackerRepository @Inject constructor(
         val cacheDeferred = async { checkGlobalCache(barcode) }
 
         val offResult = offDeferred.await()
-        if (offResult != null) {
-            Logger.debug(TAG, "Found via OpenFoodFacts")
+        if (offResult != null && !offResult.isWeak()) {
+            Logger.debug(TAG, "Found strong result via OpenFoodFacts")
             return@coroutineScope Resource.Success(offResult)
         }
 
         val obfResult = obfDeferred.await()
-        if (obfResult != null) {
-            Logger.debug(TAG, "Found via OpenBeautyFacts")
+        if (obfResult != null && !obfResult.isWeak()) {
+            Logger.debug(TAG, "Found strong result via OpenBeautyFacts")
             return@coroutineScope Resource.Success(obfResult)
         }
 
         val cacheResult = cacheDeferred.await()
-        if (cacheResult != null) {
-            Logger.debug(TAG, "Found in global cache")
+        if (cacheResult != null && !cacheResult.isWeak()) {
+            Logger.debug(TAG, "Found strong result in global cache")
             return@coroutineScope Resource.Success(cacheResult)
         }
 
         val upcResult = tryUPCItemDbAndGemini(barcode)
-        if (upcResult != null) {
-            Logger.debug(TAG, "Found via UPCitemdb + Gemini")
+        if (upcResult != null && !upcResult.isWeak()) {
+            Logger.debug(TAG, "Found strong result via UPCitemdb + Gemini")
             return@coroutineScope Resource.Success(upcResult)
+        }
+
+        // If we reached here, we have no "strong" result. 
+        // We pick the "least weak" one we found, prioritizing sources that at least found a name.
+        val bestCandidate = listOf(offResult, obfResult, cacheResult, upcResult)
+            .filterNotNull()
+            .firstOrNull { it.productName != "Unknown Product" && it.productName.isNotBlank() }
+            ?: offResult ?: obfResult ?: cacheResult ?: upcResult
+
+        if (bestCandidate != null) {
+            Logger.debug(TAG, "No strong result found for $masked, returning best candidate: ${bestCandidate.productName}")
+            return@coroutineScope Resource.Success(bestCandidate)
         }
 
         Logger.debug(TAG, "All sources exhausted for $masked, requesting user input")
@@ -240,9 +254,20 @@ class EcoTrackerRepository @Inject constructor(
     // -- Local -------------------------------------------------------------------
 
     suspend fun saveProduct(product: ScannedProduct, remoteId: String): Long {
-        val id = dao.insertProduct(product)
+        dao.upsertCachedProduct(product.toCachedProductEntity(updatedAt = product.timestamp))
+        val id = dao.insertScanHistory(
+            ScanHistoryEntity(
+                barcode = product.barcode,
+                scannedAt = product.timestamp
+            )
+        )
 
-        val firebaseUser = FirebaseAuth.getInstance().currentUser
+        val firebaseUser = try {
+            FirebaseAuth.getInstance().currentUser
+        } catch (e: Exception) {
+            Logger.error(TAG, "FirebaseAuth unavailable during save", e)
+            null
+        }
         if (firebaseUser != null) {
             try {
                 val db = FirebaseFirestore.getInstance()
@@ -289,9 +314,9 @@ class EcoTrackerRepository @Inject constructor(
         return saveProduct(product, remoteId)
     }
 
-    suspend fun deleteProduct(product: ScannedProduct) = dao.deleteProduct(product)
+    suspend fun deleteProduct(product: ScannedProduct) = dao.deleteScanHistoryById(product.id)
 
-    suspend fun deleteProductById(id: Long) = dao.deleteProductById(id)
+    suspend fun deleteProductById(id: Long) = dao.deleteScanHistoryById(id)
 
     fun getAllProducts(): Flow<List<ScannedProduct>> = dao.getAllProducts()
 
@@ -304,9 +329,12 @@ class EcoTrackerRepository @Inject constructor(
     fun getTotalScannedCount(): Flow<Int> = dao.getTotalScannedCount()
 
     suspend fun getProductByBarcode(barcode: String): ScannedProduct? =
-        dao.getProductByBarcode(barcode)
+        dao.getCachedProductByBarcode(barcode)?.toScannedProduct()
 
-    suspend fun deleteAllProducts() = dao.deleteAll()
+    suspend fun deleteAllProducts() {
+        dao.deleteAllScanHistory()
+        dao.deleteAllCachedProducts()
+    }
 
     fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> = callbackFlow {
         val db = FirebaseFirestore.getInstance()
@@ -315,7 +343,14 @@ class EcoTrackerRepository @Inject constructor(
             .limit(AppConfig.LEADERBOARD_MAX_SIZE)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(Resource.Error(error.message ?: "Failed to load leaderboard"))
+                    val message = when (error.code) {
+                        com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED -> 
+                            "Permission denied. Please ensure you are logged in."
+                        com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION -> 
+                            "Leaderboard is being initialized. Please try again in 1-2 minutes." // Usually missing index
+                        else -> error.message ?: "Failed to load leaderboard"
+                    }
+                    trySend(Resource.Error(message))
                     return@addSnapshotListener
                 }
 
