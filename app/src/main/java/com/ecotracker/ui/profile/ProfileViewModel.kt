@@ -16,8 +16,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ProfileUiState(
-    val email: String = "—",
-    val username: String = "—",
+    val email: String = "-",
+    val username: String = "-",
+    val photoUri: String? = null,
     val rankNameResId: Int = R.string.rank_seedling,
     val rankProgress: Int = 0,
     val scanCount: Int = 0,
@@ -43,9 +44,17 @@ class ProfileViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     email = profile.email,
-                    username = profile.username
+                    username = profile.username,
+                    photoUri = profile.photoUri
                 )
             }
+        }
+    }
+
+    fun updateProfilePhoto(photoUri: String?) {
+        repository.saveProfilePhotoUri(photoUri)
+        _uiState.update { current ->
+            current.copy(photoUri = photoUri)
         }
     }
 

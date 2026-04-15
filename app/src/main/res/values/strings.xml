@@ -57,6 +57,12 @@
     <string name="label_recent_achievements">Recent Achievements</string>
     <string name="label_scan_count">%d scans</string>
     <string name="products_scanned_format">%d Products Scanned</string>
+    <string name="profile_photo_content_description">Profile photo</string>
+    <string name="profile_photo_placeholder_content_description">No profile photo selected</string>
+    <string name="profile_photo_hint">Add a personal photo from your device. It stays on this device unless you choose another one.</string>
+    <string name="profile_photo_choose">Choose Photo</string>
+    <string name="profile_photo_change">Change Photo</string>
+    <string name="profile_photo_error">Could not use that image. Please choose a different photo.</string>
     
     <!-- Leaderboard menu -->
     <string name="menu_leaderboard">Leaderboard</string>

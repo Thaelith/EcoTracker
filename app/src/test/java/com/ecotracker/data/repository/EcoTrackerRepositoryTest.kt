@@ -1,5 +1,6 @@
 package com.ecotracker.data.repository
 
+import android.content.SharedPreferences
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.CachedProductEntity
 import com.ecotracker.data.local.ScannedProduct
@@ -24,6 +25,7 @@ class EcoTrackerRepositoryTest {
     private lateinit var dao: ScannedProductDao
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var sharedPreferences: SharedPreferences
     private lateinit var repository: EcoTrackerRepository
 
     private val testBarcode = "3017620422003"
@@ -36,11 +38,21 @@ class EcoTrackerRepositoryTest {
         dao = mockk(relaxed = true)
         auth = mockk()
         firestore = mockk()
+        sharedPreferences = mockk(relaxed = true)
 
         every { auth.currentUser } returns null
         every { firestore.collection(any()) } throws RuntimeException("Firestore disabled in unit test")
+        every { sharedPreferences.getString(any(), any()) } returns null
 
-        repository = EcoTrackerRepository(foodApi, beautyApi, upcApi, dao, auth, firestore)
+        repository = EcoTrackerRepository(
+            foodApi,
+            beautyApi,
+            upcApi,
+            dao,
+            auth,
+            firestore,
+            sharedPreferences
+        )
     }
 
     private fun buildProductDto(name: String, ecoGrade: String? = "B"): ProductDto {

@@ -1,119 +1,153 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp"
-    android:orientation="vertical">
+    android:background="@color/background"
+    android:fillViewport="true">
 
-    <ImageView
-        android:id="@+id/ivProfilePhoto"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp"
-        android:src="@mipmap/ic_launcher_round" />
-
-    <TextView
-        android:id="@+id/tvUsername"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Username"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/tvEmail"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="user@example.com"
-        android:textSize="16sp"
-        android:gravity="center"
-        android:layout_marginBottom="24dp" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:contentPadding="16dp">
+        android:orientation="vertical"
+        android:padding="24dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:gravity="center">
-            
+            android:paddingBottom="24dp">
+
             <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_quests"
-                app:tint="@color/eco_green"
-                android:layout_marginBottom="8dp"/>
+                android:id="@+id/ivProfilePhoto"
+                android:layout_width="112dp"
+                android:layout_height="112dp"
+                android:background="@drawable/bg_profile_photo_placeholder"
+                android:contentDescription="@string/profile_photo_placeholder_content_description"
+                android:padding="@dimen/profile_photo_placeholder_padding"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_profile"
+                android:tint="@color/md_theme_primary" />
 
-            <TextView
-                android:id="@+id/tvRankName"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectProfilePhoto"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Seedling"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="@color/eco_green"/>
+                android:layout_marginTop="16dp"
+                android:text="@string/profile_photo_choose" />
 
             <TextView
-                android:id="@+id/tvRankLevel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Eco Rank"
-                android:textSize="12sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.1"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/profile_photo_hint"
                 android:textColor="@color/on_surface_variant"
-                android:layout_marginBottom="12dp"/>
-                
-            <ProgressBar
-                android:id="@+id/pbRankProgress"
-                style="?android:attr/progressBarStyleHorizontal"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvUsername"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:text="Username"
+            android:textColor="@color/on_surface"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:text="user@example.com"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="16sp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:contentPadding="16dp">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:progress="0"
-                android:max="100" />
-                
-            <TextView
-                android:id="@+id/tvScanCountProgress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0 scans"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp" />
+                android:gravity="center"
+                android:orientation="vertical">
 
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginBottom="8dp"
+                    android:src="@drawable/ic_quests"
+                    android:tint="@color/eco_green" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Recent Achievements"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="12dp"
-        android:textColor="@color/on_surface"/>
+                <TextView
+                    android:id="@+id/tvRankName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Seedling"
+                    android:textColor="@color/eco_green"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
 
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none">
+                <TextView
+                    android:id="@+id/tvRankLevel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:letterSpacing="0.1"
+                    android:text="Eco Rank"
+                    android:textAllCaps="true"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
 
-        <LinearLayout
-            android:id="@+id/layoutBadgesPreview"
+                <ProgressBar
+                    android:id="@+id/pbRankProgress"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="0" />
+
+                <TextView
+                    android:id="@+id/tvScanCountProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="0 scans"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-            <!-- Badges will be added dynamically -->
-        </LinearLayout>
-    </HorizontalScrollView>
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp"
+            android:text="Recent Achievements"
+            android:textColor="@color/on_surface"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
-</LinearLayout>
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/layoutBadgesPreview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+    </LinearLayout>
+</ScrollView>

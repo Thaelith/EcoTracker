@@ -2,5 +2,6 @@ package com.ecotracker.data.model
 
 data class UserProfile(
     val email: String,
-    val username: String
+    val username: String,
+    val photoUri: String? = null
 )

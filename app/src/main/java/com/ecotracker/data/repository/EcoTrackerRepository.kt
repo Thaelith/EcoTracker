@@ -1,32 +1,33 @@
 package com.ecotracker.data.repository
 
+import android.content.SharedPreferences
 import com.ecotracker.data.local.EstimationStatus
+import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.local.ScannedProductDao
-import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.model.UserProfile
 import com.ecotracker.data.remote.OpenBeautyFactsApiService
 import com.ecotracker.data.remote.OpenFoodFactsApiService
 import com.ecotracker.data.remote.UPCItemDbApiService
 import com.ecotracker.utils.AppConfig
+import com.ecotracker.utils.CarbonCalculator
 import com.ecotracker.utils.Logger
 import com.ecotracker.utils.Resource
-import com.ecotracker.utils.CarbonCalculator
 import com.ecotracker.utils.toCachedProductEntity
 import com.ecotracker.utils.toScannedProduct
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FieldValue
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.callbackFlow
-import java.net.UnknownHostException
-import java.net.SocketTimeoutException
 
 @Singleton
 class EcoTrackerRepository @Inject constructor(
@@ -35,10 +36,12 @@ class EcoTrackerRepository @Inject constructor(
     private val upcApi: UPCItemDbApiService,
     private val dao: ScannedProductDao,
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val sharedPreferences: SharedPreferences
 ) {
     companion object {
         private const val TAG = "EcoRepo"
+        private const val PROFILE_PHOTO_KEY_PREFIX = "profile_photo_uri_"
     }
 
     suspend fun fetchProductByBarcode(barcode: String): Resource<ScannedProduct> = coroutineScope {
@@ -73,15 +76,16 @@ class EcoTrackerRepository @Inject constructor(
             return@coroutineScope Resource.Success(upcResult)
         }
 
-        // If we reached here, we have no "strong" result. 
-        // We pick the "least weak" one we found, prioritizing sources that at least found a name.
         val bestCandidate = listOf(offResult, obfResult, cacheResult, upcResult)
             .filterNotNull()
             .firstOrNull { it.productName != "Unknown Product" && it.productName.isNotBlank() }
             ?: offResult ?: obfResult ?: cacheResult ?: upcResult
 
         if (bestCandidate != null) {
-            Logger.debug(TAG, "No strong result found for $masked, returning best candidate: ${bestCandidate.productName}")
+            Logger.debug(
+                TAG,
+                "No strong result found for $masked, returning best candidate: ${bestCandidate.productName}"
+            )
             return@coroutineScope Resource.Success(bestCandidate)
         }
 
@@ -93,7 +97,11 @@ class EcoTrackerRepository @Inject constructor(
         val masked = Logger.maskBarcode(barcode)
         Logger.debug(TAG, "User provided description for $masked")
         return try {
-            val aiGuessResult = com.ecotracker.data.remote.GeminiCarbonService.identifyProductWithUserHint(barcode, userHint)
+            val aiGuessResult =
+                com.ecotracker.data.remote.GeminiCarbonService.identifyProductWithUserHint(
+                    barcode,
+                    userHint
+                )
 
             if (aiGuessResult != null) {
                 Logger.debug(TAG, "User-assisted identification succeeded")
@@ -115,9 +123,9 @@ class EcoTrackerRepository @Inject constructor(
 
     private suspend fun tryOpenFoodFacts(barcode: String): ScannedProduct? {
         return try {
-            val r = foodApi.getProductByBarcode(barcode)
-            if (r.isSuccessful && r.body()?.status == 1 && r.body()?.product != null) {
-                val productDto = r.body()!!.product!!
+            val response = foodApi.getProductByBarcode(barcode)
+            if (response.isSuccessful && response.body()?.status == 1 && response.body()?.product != null) {
+                val productDto = response.body()!!.product!!
                 val baseProduct = productDto.toScannedProduct(barcode)
 
                 if (CarbonCalculator.hasRealCarbonData(productDto)) {
@@ -126,9 +134,8 @@ class EcoTrackerRepository @Inject constructor(
 
                 val quantity = productDto.quantity?.takeIf { it.isNotBlank() }
                     ?: productDto.productQuantity?.let { "${it.toInt()}ml" }
-                val analysis = com.ecotracker.data.remote.GeminiCarbonService.estimateCarbonFootprint(
-                    baseProduct.productName, baseProduct.categories, quantity
-                )
+                val analysis = com.ecotracker.data.remote.GeminiCarbonService
+                    .estimateCarbonFootprint(baseProduct.productName, baseProduct.categories, quantity)
 
                 if (analysis != null) {
                     val enhanced = baseProduct.copy(
@@ -144,7 +151,9 @@ class EcoTrackerRepository @Inject constructor(
                 }
 
                 baseProduct
-            } else null
+            } else {
+                null
+            }
         } catch (e: Exception) {
             Logger.debug(TAG, "OpenFoodFacts lookup failed: ${e.javaClass.simpleName}")
             null
@@ -153,10 +162,12 @@ class EcoTrackerRepository @Inject constructor(
 
     private suspend fun tryOpenBeautyFacts(barcode: String): ScannedProduct? {
         return try {
-            val r = beautyApi.getProductByBarcode(barcode)
-            if (r.isSuccessful && r.body()?.status == 1 && r.body()?.product != null)
-                r.body()!!.product!!.toScannedProduct(barcode)
-            else null
+            val response = beautyApi.getProductByBarcode(barcode)
+            if (response.isSuccessful && response.body()?.status == 1 && response.body()?.product != null) {
+                response.body()!!.product!!.toScannedProduct(barcode)
+            } else {
+                null
+            }
         } catch (e: Exception) {
             Logger.debug(TAG, "OpenBeautyFacts lookup failed: ${e.javaClass.simpleName}")
             null
@@ -171,25 +182,34 @@ class EcoTrackerRepository @Inject constructor(
                 val age = System.currentTimeMillis() - cachedAt
 
                 if (age > AppConfig.CACHE_TTL_MILLIS) {
-                    Logger.debug(TAG, "Global cache hit is stale (>${AppConfig.CACHE_TTL_DAYS} days), ignoring")
+                    Logger.debug(
+                        TAG,
+                        "Global cache hit is stale (>${AppConfig.CACHE_TTL_DAYS} days), ignoring"
+                    )
                     return null
                 }
 
                 ScannedProduct(
-                    barcode        = barcode,
-                    productName    = doc.getString("productName") ?: "Unknown",
-                    brand          = doc.getString("brand") ?: "Unknown",
-                    ecoScore       = "AI Forecast",
-                    ecoScoreValue  = 0,
+                    barcode = barcode,
+                    productName = doc.getString("productName") ?: "Unknown",
+                    brand = doc.getString("brand") ?: "Unknown",
+                    ecoScore = "AI Forecast",
+                    ecoScoreValue = 0,
                     carbonFootprint = doc.getDouble("carbonFootprint"),
-                    status         = try { EstimationStatus.valueOf(doc.getString("status") ?: "CATEGORY_AVERAGE") } catch (e: Exception) { EstimationStatus.CATEGORY_AVERAGE },
-                    imageUrl       = doc.getString("imageUrl") ?: "",
-                    categories     = doc.getString("category") ?: "",
-                    aiReasoning    = doc.getString("aiReasoning"),
-                    aiConfidence   = doc.getString("aiConfidence"),
-                    aiDataQuality  = doc.getString("aiDataQuality")
+                    status = try {
+                        EstimationStatus.valueOf(doc.getString("status") ?: "CATEGORY_AVERAGE")
+                    } catch (_: Exception) {
+                        EstimationStatus.CATEGORY_AVERAGE
+                    },
+                    imageUrl = doc.getString("imageUrl") ?: "",
+                    categories = doc.getString("category") ?: "",
+                    aiReasoning = doc.getString("aiReasoning"),
+                    aiConfidence = doc.getString("aiConfidence"),
+                    aiDataQuality = doc.getString("aiDataQuality")
                 )
-            } else null
+            } else {
+                null
+            }
         } catch (e: Exception) {
             Logger.debug(TAG, "Global cache check failed: ${e.javaClass.simpleName}")
             null
@@ -198,31 +218,39 @@ class EcoTrackerRepository @Inject constructor(
 
     private suspend fun tryUPCItemDbAndGemini(barcode: String): ScannedProduct? {
         return try {
-            val r = upcApi.lookupBarcode(barcode)
-            if (r.isSuccessful) {
-                val item = r.body()?.items?.firstOrNull() ?: return null
+            val response = upcApi.lookupBarcode(barcode)
+            if (response.isSuccessful) {
+                val item = response.body()?.items?.firstOrNull() ?: return null
                 val title = item.title ?: return null
 
-                val analysis = com.ecotracker.data.remote.GeminiCarbonService.estimateCarbonFootprint(title, item.category)
+                val analysis =
+                    com.ecotracker.data.remote.GeminiCarbonService.estimateCarbonFootprint(
+                        title,
+                        item.category
+                    )
                 val generatedProduct = ScannedProduct(
-                    barcode        = barcode,
-                    productName    = title,
-                    brand          = item.brand ?: "Unknown",
-                    ecoScore       = "AI Forecast",
-                    ecoScoreValue  = 0,
+                    barcode = barcode,
+                    productName = title,
+                    brand = item.brand ?: "Unknown",
+                    ecoScore = "AI Forecast",
+                    ecoScoreValue = 0,
                     carbonFootprint = analysis?.kgCo2e,
-                    status         = if (analysis != null) EstimationStatus.AI_ESTIMATED else EstimationStatus.NEEDS_ESTIMATION,
-                    imageUrl       = item.images?.firstOrNull() ?: "",
-                    categories     = item.category ?: "",
-                    aiReasoning    = analysis?.reasoning,
-                    aiConfidence   = analysis?.confidence,
-                    aiDataQuality  = analysis?.dataQuality
+                    status = if (analysis != null) {
+                        EstimationStatus.AI_ESTIMATED
+                    } else {
+                        EstimationStatus.NEEDS_ESTIMATION
+                    },
+                    imageUrl = item.images?.firstOrNull() ?: "",
+                    categories = item.category ?: "",
+                    aiReasoning = analysis?.reasoning,
+                    aiConfidence = analysis?.confidence,
+                    aiDataQuality = analysis?.dataQuality
                 )
 
                 cacheProductGlobally(generatedProduct)
                 generatedProduct
             } else {
-                Logger.debug(TAG, "UPC request failed with code ${r.code()}")
+                Logger.debug(TAG, "UPC request failed with code ${response.code()}")
                 null
             }
         } catch (e: Exception) {
@@ -252,8 +280,6 @@ class EcoTrackerRepository @Inject constructor(
         }
     }
 
-    // -- Local -------------------------------------------------------------------
-
     suspend fun saveProduct(product: ScannedProduct, remoteId: String): Long {
         dao.upsertCachedProduct(product.toCachedProductEntity(updatedAt = product.timestamp))
         val id = dao.insertScanHistory(
@@ -269,6 +295,7 @@ class EcoTrackerRepository @Inject constructor(
             Logger.error(TAG, "FirebaseAuth unavailable during save", e)
             null
         }
+
         if (firebaseUser != null) {
             try {
                 val userRef = firestore.collection("users").document(firebaseUser.uid)
@@ -302,13 +329,12 @@ class EcoTrackerRepository @Inject constructor(
                 }.await()
             } catch (e: Exception) {
                 Logger.error(TAG, "Firestore sync failed during save", e)
-                // Local save still succeeded — don't throw
             }
         }
+
         return id
     }
 
-    /** Convenience overload used by ManualEntryViewModel (no remote sync ID). */
     suspend fun saveProduct(product: ScannedProduct): Long {
         val remoteId = "${product.barcode}_${product.timestamp}"
         return saveProduct(product, remoteId)
@@ -334,21 +360,35 @@ class EcoTrackerRepository @Inject constructor(
     suspend fun getCurrentUserProfile(): UserProfile {
         val currentUser = auth.currentUser ?: return UserProfile(
             email = "Not signed in",
-            username = "—"
+            username = "-",
+            photoUri = null
         )
 
         val username = try {
             val document = firestore.collection("users").document(currentUser.uid).get().await()
-            sanitizeUsername(document.getString("username").orEmpty()).ifBlank { "—" }
+            sanitizeUsername(document.getString("username").orEmpty()).ifBlank { "-" }
         } catch (e: Exception) {
             Logger.debug(TAG, "Failed to load current user profile: ${e.javaClass.simpleName}")
-            "—"
+            "-"
         }
 
         return UserProfile(
-            email = currentUser.email ?: "—",
-            username = username
+            email = currentUser.email ?: "-",
+            username = username,
+            photoUri = getProfilePhotoUri()
         )
+    }
+
+    fun getProfilePhotoUri(): String? {
+        val userKey = auth.currentUser?.uid ?: "guest"
+        return sharedPreferences.getString("$PROFILE_PHOTO_KEY_PREFIX$userKey", null)
+    }
+
+    fun saveProfilePhotoUri(photoUri: String?) {
+        val userKey = auth.currentUser?.uid ?: "guest"
+        sharedPreferences.edit()
+            .putString("$PROFILE_PHOTO_KEY_PREFIX$userKey", photoUri)
+            .apply()
     }
 
     suspend fun deleteAllProducts() {
@@ -356,42 +396,46 @@ class EcoTrackerRepository @Inject constructor(
         dao.deleteAllCachedProducts()
     }
 
-    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> = callbackFlow {
-        val listener = firestore.collection("users")
-            .orderBy("scanCount", com.google.firebase.firestore.Query.Direction.DESCENDING)
-            .limit(AppConfig.LEADERBOARD_MAX_SIZE)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    val message = when (error.code) {
-                        com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED -> 
-                            "Permission denied. Please ensure you are logged in."
-                        com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION -> 
-                            "Leaderboard is being initialized. Please try again in 1-2 minutes." // Usually missing index
-                        else -> error.message ?: "Failed to load leaderboard"
-                    }
-                    trySend(Resource.Error(message))
-                    return@addSnapshotListener
-                }
+    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> =
+        callbackFlow {
+            val listener = firestore.collection("users")
+                .orderBy("scanCount", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(AppConfig.LEADERBOARD_MAX_SIZE)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        val message = when (error.code) {
+                            com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+                                "Permission denied. Please ensure you are logged in."
 
-                if (snapshot != null) {
-                    val users = snapshot.documents.mapIndexed { index, doc ->
-                        val rawUsername = doc.getString("username") ?: "Anonymous"
-                        com.ecotracker.data.model.LeaderboardUser(
-                            uid = doc.id,
-                            rank = index + 1,
-                            username = sanitizeUsername(rawUsername),
-                            scanCount = doc.getLong("scanCount")?.toInt() ?: 0,
-                            co2e = doc.getDouble("co2e") ?: 0.0
-                        )
-                    }
-                    trySend(Resource.Success(users))
-                }
-            }
-        awaitClose { listener.remove() }
-    }
+                            com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION ->
+                                "Leaderboard is being initialized. Please try again in 1-2 minutes."
 
-    /** Strip anything that isn't alphanumeric, space, underscore, or hyphen. */
+                            else -> error.message ?: "Failed to load leaderboard"
+                        }
+                        trySend(Resource.Error(message))
+                        return@addSnapshotListener
+                    }
+
+                    if (snapshot != null) {
+                        val users = snapshot.documents.mapIndexed { index, doc ->
+                            val rawUsername = doc.getString("username") ?: "Anonymous"
+                            com.ecotracker.data.model.LeaderboardUser(
+                                uid = doc.id,
+                                rank = index + 1,
+                                username = sanitizeUsername(rawUsername),
+                                scanCount = doc.getLong("scanCount")?.toInt() ?: 0,
+                                co2e = doc.getDouble("co2e") ?: 0.0
+                            )
+                        }
+                        trySend(Resource.Success(users))
+                    }
+                }
+            awaitClose { listener.remove() }
+        }
+
     private fun sanitizeUsername(raw: String): String {
-        return raw.replace(Regex("[^a-zA-Z0-9_ \\-]"), "").take(AppConfig.USERNAME_MAX_LENGTH).ifBlank { "Anonymous" }
+        return raw.replace(Regex("[^a-zA-Z0-9_ \\-]"), "")
+            .take(AppConfig.USERNAME_MAX_LENGTH)
+            .ifBlank { "Anonymous" }
     }
 }

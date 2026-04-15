@@ -1,6 +1,7 @@
 package com.ecotracker.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Room
 import com.ecotracker.BuildConfig
 import com.ecotracker.data.local.EcoTrackerDatabase
@@ -106,4 +107,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences =
+        context.getSharedPreferences("ecotracker_prefs", Context.MODE_PRIVATE)
 }

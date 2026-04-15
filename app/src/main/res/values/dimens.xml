@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="active_user_stroke_width">3dp</dimen>
+    <dimen name="profile_photo_placeholder_padding">28dp</dimen>
 </resources>
