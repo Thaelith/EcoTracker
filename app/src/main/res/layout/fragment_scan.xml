@@ -13,68 +13,147 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- ── Scanner Card ── -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp">
+            app:cardBackgroundColor="@color/md_theme_surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/md_theme_surface_variant"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:padding="20dp"
-                android:gravity="center">
+                android:padding="24dp">
 
-                <!-- Camera placeholder -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/scan_title"
+                    android:textColor="@color/on_surface"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:text="@string/scan_subtitle"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="14sp" />
+
                 <ImageView
-                    android:layout_width="200dp"
-                    android:layout_height="200dp"
-                    android:src="@drawable/ic_camera_placeholder"
-                    android:contentDescription="Camera viewfinder placeholder"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_width="180dp"
+                    android:layout_height="180dp"
+                    android:layout_marginTop="20dp"
+                    android:contentDescription="@string/btn_scan"
+                    android:src="@drawable/ic_camera_placeholder" />
 
                 <TextView
                     android:id="@+id/tvScannedBarcode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_subtle_chip"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
                     android:text="@string/scan_hint"
-                    android:textSize="14sp"
                     android:textColor="@color/on_surface_variant"
-                    android:layout_marginBottom="16dp" />
+                    android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnScanBarcode"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
                     android:text="@string/btn_scan"
-                    android:paddingHorizontal="32dp"
-                    app:cornerRadius="24dp"
+                    app:cornerRadius="14dp"
                     app:icon="@drawable/ic_barcode_scan" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ── Progress ── -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/loadingState"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone"
             android:layout_marginBottom="16dp"
-            android:indeterminateTint="@color/md_theme_primary" />
+            android:background="@drawable/bg_state_panel"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:visibility="gone">
 
-        <!-- ── Product Result Card ── -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:indeterminateTint="@color/md_theme_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/scan_loading_title"
+                android:textColor="@color/on_surface"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="@string/scan_loading_subtitle"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/errorState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_error_panel"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvErrorTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/scan_error_title"
+                android:textColor="@color/impact_high"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvErrorMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/scan_error_retry"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13sp" />
+        </LinearLayout>
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/productResultCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp">
+            app:cardBackgroundColor="@color/md_theme_surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/md_theme_surface_variant"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -82,195 +161,215 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- EcoScore badge -->
+                <TextView
+                    android:id="@+id/tvResultState"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_subtle_chip"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:text="@string/scan_state_found"
+                    android:textColor="@color/md_theme_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:layout_marginTop="14dp"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
+                    android:orientation="horizontal">
 
                     <TextView
                         android:id="@+id/tvEcoScore"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:background="@drawable/eco_score_badge"
                         android:gravity="center"
                         android:text="A"
                         android:textColor="@android:color/white"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/eco_score_badge" />
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
                         android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
+                        android:orientation="vertical">
 
                         <TextView
                             android:id="@+id/tvProductName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Product Name"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/on_surface" />
+                            android:textColor="@color/on_surface"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/tvBrand"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Brand"
-                            android:textSize="14sp"
-                            android:textColor="@color/on_surface_variant"
-                            android:layout_marginTop="2dp" />
-
-                        <TextView
-                            android:id="@+id/tvStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:background="@drawable/status_badge_background"
-                            android:paddingHorizontal="6dp"
-                            android:paddingVertical="2dp"
-                            android:text="VERIFIED"
-                            android:textColor="@android:color/white"
-                            android:textSize="10sp"
-                            android:textStyle="bold" />
+                            android:text="Brand"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="14sp" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/status_badge_background"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="4dp"
+                    android:text="VERIFIED"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
 
                 <com.google.android.material.divider.MaterialDivider
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp" />
 
-                <!-- Carbon footprint row -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:background="@drawable/bg_state_panel"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
+                    android:orientation="horizontal"
+                    android:padding="14dp">
 
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
-                        android:src="@drawable/ic_co2"
-                        android:layout_marginEnd="8dp"
-                        android:contentDescription="CO2" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/label_carbon"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
-
-                    <TextView
-                        android:id="@+id/tvCarbon"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="—"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/on_surface" />
-                </LinearLayout>
-
-                <!-- Categories -->
-                <TextView
-                    android:id="@+id/tvCategories"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="—"
-                    android:textSize="12sp"
-                    android:textColor="@color/on_surface_variant"
-                    android:layout_marginBottom="12dp" />
-
-                <!-- Analysis Section -->
-                <LinearLayout
-                    android:id="@+id/analysisSection"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone"
-                    android:background="@drawable/ai_info_background"
-                    android:padding="12dp"
-                    android:layout_marginBottom="16dp">
+                        android:contentDescription="@string/content_description_co2"
+                        android:src="@drawable/ic_co2" />
 
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="4dp">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_ai_stars"
-                            android:layout_marginEnd="6dp"
-                            app:tint="@color/md_theme_primary" />
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="AI Environmental Analysis"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/md_theme_primary" />
+                            android:text="@string/label_carbon"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" />
 
-                        <View
+                        <TextView
+                            android:id="@+id/tvCarbon"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="0.0 kg CO2e"
+                            android:textColor="@color/on_surface"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/scan_categories_label"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvCategories"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Category"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:id="@+id/analysisSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_state_panel"
+                    android:orientation="vertical"
+                    android:padding="14dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_marginEnd="6dp"
+                            android:src="@drawable/ic_ai_stars"
+                            app:tint="@color/md_theme_primary" />
+
+                        <TextView
                             android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:layout_weight="1" />
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/scan_ai_title"
+                            android:textColor="@color/md_theme_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/tvConfidence"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="High Confidence"
-                            android:textSize="10sp"
-                            android:textColor="@color/on_surface_variant" />
+                            android:text="Confidence: High"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="11sp" />
                     </LinearLayout>
 
                     <TextView
                         android:id="@+id/tvReasoning"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Reasoning goes here..."
-                        android:textSize="12sp"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingExtra="2dp"
+                        android:text="Reasoning"
                         android:textColor="@color/on_surface"
-                        android:lineSpacingExtra="2dp" />
+                        android:textSize="13sp" />
                 </LinearLayout>
 
-                <!-- Action buttons -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
                     android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSaveProduct"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:text="@string/btn_save"
-                        android:layout_marginEnd="8dp"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="14dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnScanAgain"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
                         android:layout_weight="1"
                         android:text="@string/btn_scan_again"
-                        android:layout_marginStart="8dp"
-                        app:cornerRadius="12dp" />
-
+                        app:cornerRadius="14dp" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

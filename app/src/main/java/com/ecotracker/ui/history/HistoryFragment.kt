@@ -15,7 +15,6 @@ import com.ecotracker.ui.comparison.ComparisonViewModel
 import com.ecotracker.utils.gone
 import com.ecotracker.utils.visible
 import dagger.hilt.android.AndroidEntryPoint
-import com.google.android.material.snackbar.Snackbar
 
 @AndroidEntryPoint
 class HistoryFragment : Fragment() {
@@ -69,14 +68,26 @@ class HistoryFragment : Fragment() {
 
     private fun observeComparison() {
         comparisonViewModel.selectedProducts.observe(viewLifecycleOwner) { selected ->
+            adapter.updateSelection(selected)
             when (selected.size) {
                 1 -> {
-                    view?.let { 
-                        Snackbar.make(it, "1 of 2 selected for comparison", Snackbar.LENGTH_SHORT).show()
-                    }
+                    binding.tvComparisonStateTitle.text =
+                        getString(R.string.history_compare_selected_one)
+                    binding.tvComparisonStateSubtitle.text =
+                        getString(R.string.history_compare_cta)
                 }
                 2 -> {
+                    binding.tvComparisonStateTitle.text =
+                        getString(R.string.history_compare_selected_two)
+                    binding.tvComparisonStateSubtitle.text =
+                        getString(R.string.history_compare_ready)
                     findNavController().navigate(R.id.action_historyFragment_to_comparisonFragment)
+                }
+                else -> {
+                    binding.tvComparisonStateTitle.text =
+                        getString(R.string.history_compare_idle)
+                    binding.tvComparisonStateSubtitle.text =
+                        getString(R.string.history_compare_cta)
                 }
             }
         }

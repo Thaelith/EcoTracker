@@ -9,14 +9,17 @@ import androidx.fragment.app.viewModels
 import com.ecotracker.R
 import com.ecotracker.databinding.FragmentStatisticsBinding
 import com.ecotracker.utils.CarbonCalculator
+import com.github.mikephil.charting.components.AxisBase
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
 @AndroidEntryPoint
 class StatisticsFragment : Fragment() {
@@ -32,7 +35,9 @@ class StatisticsFragment : Fragment() {
     private val viewModel: StatisticsViewModel by viewModels()
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View {
         _binding = FragmentStatisticsBinding.inflate(inflater, container, false)
         return binding.root
@@ -51,12 +56,16 @@ class StatisticsFragment : Fragment() {
             setDrawGridBackground(false)
             setDrawBorders(false)
             setFitBars(true)
+            setNoDataText("")
+            setPinchZoom(false)
+            setScaleEnabled(false)
             extraBottomOffset = 8f
 
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
                 setDrawGridLines(false)
                 granularity = 1f
+                labelCount = 7
                 textColor = requireContext().getColor(R.color.on_surface_variant)
                 textSize = 11f
             }
@@ -67,6 +76,11 @@ class StatisticsFragment : Fragment() {
                 textColor = requireContext().getColor(R.color.on_surface_variant)
                 textSize = 11f
                 gridColor = requireContext().getColor(R.color.md_theme_surface_variant)
+                valueFormatter = object : ValueFormatter() {
+                    override fun getAxisLabel(value: Float, axis: AxisBase?): String {
+                        return if (value == 0f) "0" else "${value.toInt()} kg"
+                    }
+                }
             }
 
             axisRight.isEnabled = false
@@ -89,35 +103,39 @@ class StatisticsFragment : Fragment() {
         viewModel.weeklyProducts.observe(viewLifecycleOwner) { products ->
             if (products.isEmpty()) {
                 binding.barChart.clear()
+                binding.chartEmptyState.visibility = View.VISIBLE
                 return@observe
             }
-            
-            // Group products by day of year
+
+            binding.chartEmptyState.visibility = View.GONE
+
             val cal = Calendar.getInstance()
-            val groupedByDay = products.groupBy { 
+            val groupedByDay = products.groupBy {
                 cal.timeInMillis = it.timestamp
                 cal.get(Calendar.DAY_OF_YEAR)
             }
 
-            // Create last 7 days list
             val format = SimpleDateFormat("EEE", Locale.getDefault())
             val entries = mutableListOf<BarEntry>()
             val labels = mutableListOf<String>()
 
             val iterCal = Calendar.getInstance()
-            iterCal.add(Calendar.DAY_OF_YEAR, -6) // Start from 6 days ago
+            iterCal.add(Calendar.DAY_OF_YEAR, -6)
 
             for (i in 0..6) {
                 val dayOfYear = iterCal.get(Calendar.DAY_OF_YEAR)
                 val dayList = groupedByDay[dayOfYear] ?: emptyList()
-                val sumCarbon = dayList.filter { it.carbonFootprint != null }.sumOf { it.carbonFootprint!! }.toFloat()
+                val sumCarbon = dayList
+                    .filter { it.carbonFootprint != null }
+                    .sumOf { it.carbonFootprint!! }
+                    .toFloat()
 
                 entries.add(BarEntry(i.toFloat(), sumCarbon))
                 labels.add(format.format(iterCal.time))
                 iterCal.add(Calendar.DAY_OF_YEAR, 1)
             }
 
-            val dataSet = BarDataSet(entries, "Carbon Footprint").apply {
+            val dataSet = BarDataSet(entries, getString(R.string.chart_title)).apply {
                 colors = entries.map { entry ->
                     when (resolveImpactLevel(entry.y)) {
                         ImpactLevel.LOW -> requireContext().getColor(R.color.impact_low)
@@ -135,7 +153,8 @@ class StatisticsFragment : Fragment() {
                 data = BarData(dataSet).apply {
                     barWidth = 0.56f
                 }
-                invalidate() // refresh
+                animateY(300)
+                invalidate()
             }
         }
     }

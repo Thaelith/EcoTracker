@@ -86,6 +86,7 @@ class ScanViewModel @Inject constructor(
     }
 
     fun resetState() {
+        _scanState.value = null
         _savedState.value = null
         _showManualEntry.value = null
         _showInputPrompt.value = null

@@ -4,59 +4,62 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    app:cardBackgroundColor="@color/md_theme_surface"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/md_theme_surface_variant"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:padding="12dp"
-        android:gravity="center_horizontal">
+        android:padding="16dp">
 
         <ImageView
             android:id="@+id/ivProduct"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:alpha="0.9"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_history_empty"
-            android:alpha="0.8"
-            android:layout_marginBottom="8dp" />
+            android:src="@drawable/ic_history_empty" />
 
         <TextView
             android:id="@+id/tvName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Product Name"
-            android:textSize="14sp"
-            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            android:ellipsize="end"
             android:gravity="center"
-            android:textColor="@color/on_surface"
             android:maxLines="2"
-            android:ellipsize="end" />
+            android:minLines="2"
+            android:text="Product Name"
+            android:textColor="@color/on_surface"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvCarbon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:text="0.00 kg"
-            android:textSize="16sp"
-            android:textStyle="bold"
             android:textColor="@color/eco_green"
-            android:layout_marginTop="8dp" />
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="VERIFIED"
-            android:textSize="10sp"
-            android:textColor="@android:color/white"
+            android:layout_marginTop="8dp"
             android:background="@drawable/status_badge_background"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="1dp"
-            android:layout_marginTop="4dp"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
+            android:text="VERIFIED"
+            android:textColor="@android:color/white"
+            android:textSize="10sp"
             android:textStyle="bold" />
-
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

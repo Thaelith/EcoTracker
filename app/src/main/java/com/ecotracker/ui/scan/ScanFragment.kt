@@ -12,15 +12,17 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.ecotracker.R
+import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.databinding.FragmentScanBinding
+import com.ecotracker.utils.CarbonCalculator
 import com.ecotracker.utils.Resource
+import com.ecotracker.utils.ecoScoreColor
 import com.ecotracker.utils.gone
+import com.ecotracker.utils.toColor
+import com.ecotracker.utils.toColorGradient
+import com.ecotracker.utils.toDisplayLabel
 import com.ecotracker.utils.toast
 import com.ecotracker.utils.visible
-import com.ecotracker.utils.ecoScoreColor
-import com.ecotracker.utils.toColorGradient
-import com.ecotracker.utils.toColor
-import com.ecotracker.utils.CarbonCalculator
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanIntentResult
 import com.journeyapps.barcodescanner.ScanOptions
@@ -33,28 +35,32 @@ class ScanFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ScanViewModel by viewModels()
 
-    // ── Camera permission launcher ────────────────────────────────────────────
-
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) launchScanner() else requireContext().toast("Camera permission required")
+            if (granted) {
+                launchScanner()
+            } else {
+                showErrorState(
+                    title = getString(R.string.scan_permission_required),
+                    message = getString(R.string.scan_error_retry)
+                )
+            }
         }
-
-    // ── ZXing scanner launcher ────────────────────────────────────────────────
 
     private val scannerLauncher =
         registerForActivityResult(ScanContract()) { result: ScanIntentResult ->
             result.contents?.let { barcode ->
                 binding.tvScannedBarcode.text = barcode
                 binding.productResultCard.gone()
+                binding.errorState.gone()
                 viewModel.lookupBarcode(barcode)
             }
         }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
-
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View {
         _binding = FragmentScanBinding.inflate(inflater, container, false)
         return binding.root
@@ -64,6 +70,7 @@ class ScanFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupListeners()
         observeViewModel()
+        resetToIdleState()
     }
 
     override fun onDestroyView() {
@@ -71,20 +78,17 @@ class ScanFragment : Fragment() {
         _binding = null
     }
 
-    // ── Setup ─────────────────────────────────────────────────────────────────
-
     private fun setupListeners() {
         binding.btnScanBarcode.setOnClickListener { checkCameraAndScan() }
 
         binding.btnSaveProduct.setOnClickListener {
             val product = (viewModel.scanState.value as? Resource.Success)?.data
-            product?.let { viewModel.saveProduct(it) }
+            product?.let(viewModel::saveProduct)
         }
 
         binding.btnScanAgain.setOnClickListener {
-            binding.productResultCard.gone()
-            binding.tvScannedBarcode.text = getString(R.string.scan_hint)
             viewModel.resetState()
+            resetToIdleState()
         }
     }
 
@@ -98,38 +102,42 @@ class ScanFragment : Fragment() {
                 }
                 is Resource.Error -> {
                     showLoading(false)
-                    com.google.android.material.snackbar.Snackbar.make(
-                        binding.root,
-                        state.message,
-                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
-                    ).show()
+                    showErrorState(
+                        title = getString(R.string.scan_error_title),
+                        message = state.message
+                    )
                 }
                 is Resource.NeedsInput -> {
                     showLoading(false)
                 }
-                null -> { /* idle */ }
+                null -> resetToIdleState()
             }
         }
 
         viewModel.savedState.observe(viewLifecycleOwner) { resource ->
             when (resource) {
                 is Resource.Loading -> {
-                    showLoading(true)
+                    binding.loadingState.visible()
                     binding.btnSaveProduct.isEnabled = false
+                    binding.btnScanAgain.isEnabled = false
                 }
                 is Resource.Success -> {
-                    showLoading(false)
+                    binding.loadingState.gone()
+                    binding.tvResultState.text = getString(R.string.scan_state_saved)
+                    binding.btnScanAgain.isEnabled = true
                     requireContext().toast(getString(R.string.msg_save_success))
                     viewModel.onProductSavedToastShown()
-                    // Keep button disabled after success to prevent re-saves
                 }
                 is Resource.Error -> {
-                    showLoading(false)
+                    binding.loadingState.gone()
                     binding.btnSaveProduct.isEnabled = true
+                    binding.btnScanAgain.isEnabled = true
                     requireContext().toast(resource.message)
                 }
                 else -> {
-                    showLoading(false)
+                    binding.loadingState.gone()
+                    binding.btnSaveProduct.isEnabled = true
+                    binding.btnScanAgain.isEnabled = true
                 }
             }
         }
@@ -151,9 +159,11 @@ class ScanFragment : Fragment() {
     }
 
     private fun showProductHintDialog(barcode: String) {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_product_hint, null)
-        val etHint = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etProductHint)
-        
+        val dialogView =
+            LayoutInflater.from(requireContext()).inflate(R.layout.dialog_product_hint, null)
+        val etHint =
+            dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etProductHint)
+
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.dialog_ai_title))
             .setIcon(R.drawable.ic_ai_stars)
@@ -169,16 +179,13 @@ class ScanFragment : Fragment() {
             .setNegativeButton(getString(R.string.dialog_ai_cancel_btn), null)
             .show()
 
-        // Auto-show keyboard
         etHint.requestFocus()
     }
 
-    // ── Scanning ──────────────────────────────────────────────────────────────
-
     private fun checkCameraAndScan() {
         when {
-            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
-                    == PackageManager.PERMISSION_GRANTED -> launchScanner()
+            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED -> launchScanner()
             else -> requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
@@ -186,7 +193,7 @@ class ScanFragment : Fragment() {
     private fun launchScanner() {
         val options = ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
-            setPrompt("Align barcode within the frame")
+            setPrompt(getString(R.string.scan_prompt_align))
             setBeepEnabled(true)
             setBarcodeImageEnabled(false)
             setOrientationLocked(false)
@@ -194,37 +201,70 @@ class ScanFragment : Fragment() {
         scannerLauncher.launch(options)
     }
 
-    // ── UI updates ────────────────────────────────────────────────────────────
-
     private fun showLoading(loading: Boolean) {
-        if (loading) binding.progressBar.visible() else binding.progressBar.gone()
+        binding.loadingState.visibility = if (loading) View.VISIBLE else View.GONE
+        binding.errorState.gone()
+        binding.btnScanBarcode.isEnabled = !loading
+        if (loading) {
+            binding.productResultCard.gone()
+        }
     }
 
-    private fun displayProduct(product: com.ecotracker.data.local.ScannedProduct) {
+    private fun displayProduct(product: ScannedProduct) {
         binding.apply {
+            loadingState.gone()
+            errorState.gone()
             productResultCard.visible()
-            tvProductName.text  = product.productName
-            tvBrand.text        = product.brand
-            tvEcoScore.text     = product.ecoScore
+            btnSaveProduct.isEnabled = true
+            btnScanAgain.isEnabled = true
+            tvResultState.text = getString(R.string.scan_state_found)
+            tvProductName.text = product.productName
+            tvBrand.text = product.brand
+            tvEcoScore.text = product.ecoScore
             tvEcoScore.setBackgroundColor(product.ecoScore.ecoScoreColor())
-            tvCarbon.text       = CarbonCalculator.format(product.carbonFootprint)
+            tvCarbon.text = CarbonCalculator.format(product.carbonFootprint)
             tvCarbon.setTextColor(product.carbonFootprint.toColorGradient())
-            
-            // Update Status Badge
-            tvStatus.text = product.status.name.replace("_", " ")
+            tvStatus.text =
+                getString(R.string.scan_result_status_format, product.status.toDisplayLabel())
             tvStatus.background.setTint(product.status.toColor())
+            tvCategories.text = if (product.categories.isNotBlank()) {
+                product.categories.take(80)
+            } else {
+                getString(R.string.scan_result_missing_value)
+            }
 
-            tvCategories.text   = if (product.categories.isNotBlank())
-                product.categories.take(80) else "—"
-
-            // Show Analysis if available
             if (!product.aiReasoning.isNullOrBlank()) {
                 analysisSection.visible()
                 tvReasoning.text = product.aiReasoning
-                tvConfidence.text = "Confidence: ${product.aiConfidence ?: "Unknown"}"
+                tvConfidence.text = getString(
+                    R.string.scan_ai_confidence,
+                    product.aiConfidence ?: getString(R.string.scan_result_missing_value)
+                )
             } else {
                 analysisSection.gone()
             }
         }
+    }
+
+    private fun showErrorState(title: String, message: String) {
+        binding.loadingState.gone()
+        binding.productResultCard.gone()
+        binding.errorState.visible()
+        binding.tvErrorTitle.text = title
+        binding.tvErrorMessage.text = message
+        binding.btnScanBarcode.isEnabled = true
+        binding.btnSaveProduct.isEnabled = true
+        binding.btnScanAgain.isEnabled = true
+    }
+
+    private fun resetToIdleState() {
+        binding.loadingState.gone()
+        binding.errorState.gone()
+        binding.productResultCard.gone()
+        binding.tvScannedBarcode.text = getString(R.string.scan_hint)
+        binding.tvResultState.text = getString(R.string.scan_state_found)
+        binding.btnScanBarcode.isEnabled = true
+        binding.btnSaveProduct.isEnabled = true
+        binding.btnScanAgain.isEnabled = true
     }
 }

@@ -13,10 +13,36 @@
     <string name="btn_save">Save to History</string>
     <string name="btn_scan_again">Scan Again</string>
     <string name="label_carbon">Carbon Footprint</string>
+    <string name="scan_title">Scan a product</string>
+    <string name="scan_subtitle">Check carbon impact and save trustworthy results to your history.</string>
+    <string name="scan_loading_title">Looking up product details</string>
+    <string name="scan_loading_subtitle">Checking trusted product data sources and calculating impact.</string>
+    <string name="scan_state_found">Ready to review</string>
+    <string name="scan_state_saved">Saved to history</string>
+    <string name="scan_state_saved_subtitle">You can review this product later in History.</string>
+    <string name="scan_ai_title">AI-assisted estimate</string>
+    <string name="scan_ai_confidence">Confidence: %s</string>
+    <string name="scan_categories_label">Category</string>
+    <string name="scan_permission_required">Camera permission is required to scan barcodes.</string>
+    <string name="scan_prompt_align">Align the barcode within the frame</string>
+    <string name="scan_result_missing_value">Not available</string>
+    <string name="scan_result_status_format">Data source: %s</string>
+    <string name="scan_error_title">Couldn\'t load this product</string>
+    <string name="scan_error_retry">Try scanning again or enter details manually if the barcode is not available yet.</string>
 
     <!-- History screen -->
     <string name="history_empty_title">No scans yet</string>
     <string name="history_empty_subtitle">Start scanning products to track your environmental impact</string>
+    <string name="history_title">History</string>
+    <string name="history_subtitle">Review saved scans and pick two products to compare.</string>
+    <string name="history_compare_idle">Select two products to compare their impact.</string>
+    <string name="history_compare_selected_one">1 of 2 selected for comparison</string>
+    <string name="history_compare_selected_two">Opening comparison</string>
+    <string name="history_compare_cta">Select one more product</string>
+    <string name="history_compare_ready">Two products selected. Opening comparison.</string>
+    <string name="history_card_saved_label">Saved</string>
+    <string name="history_compare_description">Add this product to comparison</string>
+    <string name="history_delete_description">Delete this saved product</string>
 
     <!-- Statistics screen -->
     <string name="label_today">Today</string>
@@ -27,6 +53,15 @@
     <string name="impact_low_label">Low (0-2 kg)</string>
     <string name="impact_medium_label">Medium (2-5 kg)</string>
     <string name="impact_high_label">High (5+ kg)</string>
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_subtitle">A clear weekly view of your tracked product impact.</string>
+    <string name="statistics_chart_y_axis">kg CO2e per day</string>
+    <string name="statistics_chart_empty_title">No weekly data yet</string>
+    <string name="statistics_chart_empty_subtitle">Your last seven days of impact will appear here after you save scans.</string>
+    <string name="statistics_total_scans_supporting">Saved products in your history</string>
+    <string name="statistics_today_supporting">Impact from products saved today</string>
+    <string name="statistics_week_supporting">Impact from the last seven days</string>
+    <string name="statistics_bar_content">%.2f kg CO2e</string>
 
     <!-- Comparison screen -->
     <string name="title_comparison">Product Comparison</string>
@@ -34,6 +69,17 @@
     <string name="label_lower_impact">%.1f%% lower impact</string>
     <string name="label_impact_difference">%.2f kg CO2e difference</string>
     <string name="msg_incomplete_comparison">Some data is missing. Showing partial comparison.</string>
+    <string name="comparison_title">Compare products</string>
+    <string name="comparison_subtitle">Side-by-side carbon impact from your saved history.</string>
+    <string name="comparison_empty_title">Select two products first</string>
+    <string name="comparison_empty_subtitle">Choose products from History to compare them here.</string>
+    <string name="comparison_result_title">Impact summary</string>
+    <string name="comparison_result_subtitle">Lower carbon impact is better.</string>
+    <string name="comparison_missing_data">Impact data is incomplete for one or both products.</string>
+    <string name="comparison_status_format">Data source: %s</string>
+    <string name="comparison_better_choice">Lower impact choice</string>
+    <string name="comparison_no_clear_winner">No clear winner</string>
+    <string name="comparison_back_description">Go back</string>
 
     <!-- Achievements screen -->
     <string name="title_achievements">My Achievements</string>
@@ -88,4 +134,6 @@
     <string name="error_product_not_found">Product not found in any database.</string>
     <string name="error_unknown">Something went wrong. Please try again.</string>
     <string name="error_ai_failed">Could not identify the product. Try adding more detail.</string>
+    <string name="content_description_co2">Carbon impact</string>
+    <string name="content_description_history_empty">No saved scans</string>
 </resources>

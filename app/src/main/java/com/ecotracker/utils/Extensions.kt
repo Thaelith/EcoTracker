@@ -151,3 +151,11 @@ fun EstimationStatus.toColor(): Int = when (this) {
     EstimationStatus.NEEDS_ESTIMATION -> Color.parseColor("#ef6c00") // Orange
     EstimationStatus.UNIDENTIFIED     -> Color.parseColor("#9e9e9e") // Grey
 }
+
+fun EstimationStatus.toDisplayLabel(): String = when (this) {
+    EstimationStatus.VERIFIED -> "Verified data"
+    EstimationStatus.AI_ESTIMATED -> "AI estimate"
+    EstimationStatus.CATEGORY_AVERAGE -> "Category average"
+    EstimationStatus.NEEDS_ESTIMATION -> "Needs estimate"
+    EstimationStatus.UNIDENTIFIED -> "Unidentified"
+}
