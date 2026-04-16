@@ -46,8 +46,12 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@color/md_theme_surface"
-        app:itemIconTint="@color/bottom_nav_color"
-        app:itemTextColor="@color/bottom_nav_color"
+        app:itemBackground="@drawable/drawer_item_background"
+        app:itemHorizontalPadding="16dp"
+        app:itemIconTint="@color/drawer_item_color"
+        app:itemShapeInsetEnd="12dp"
+        app:itemShapeInsetStart="12dp"
+        app:itemTextColor="@color/drawer_item_color"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/drawer_menu" />
 

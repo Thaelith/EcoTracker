@@ -11,9 +11,11 @@
 
     <color name="md_theme_surface">#FCFDF6</color>
     <color name="md_theme_surface_variant">#DEE5D9</color>
+    <color name="md_theme_surface_bright">#F8FBF4</color>
 
     <color name="on_surface">#1A1C19</color>
     <color name="on_surface_variant">#424940</color>
+    <color name="on_surface_soft">#5A6157</color>
 
     <color name="background">#F4F6F0</color>
 
@@ -33,6 +35,23 @@
     <!-- Bottom nav selector -->
     <color name="bottom_nav_selected">@color/md_theme_primary</color>
     <color name="bottom_nav_unselected">#757575</color>
+
+    <!-- Navigation drawer -->
+    <color name="drawer_item_selected_bg">#E3F1E2</color>
+    <color name="drawer_item_selected_fg">#1F5A24</color>
+    <color name="drawer_item_unselected_fg">@color/on_surface_variant</color>
+
+    <!-- Search with AI dialog -->
+    <color name="dialog_surface">@color/md_theme_surface_bright</color>
+    <color name="dialog_title">@color/on_surface</color>
+    <color name="dialog_body">@color/on_surface_variant</color>
+    <color name="dialog_input_surface">#F7FAF4</color>
+    <color name="dialog_input_stroke">#7A8977</color>
+    <color name="dialog_input_hint">@color/on_surface_soft</color>
+    <color name="dialog_input_text">@color/on_surface</color>
+    <color name="dialog_primary_button_bg">@color/md_theme_primary</color>
+    <color name="dialog_primary_button_text">@color/md_theme_on_primary</color>
+    <color name="dialog_secondary_button_text">@color/md_theme_primary</color>
     
     <!-- Leaderboard Rank Colors -->
     <color name="rank_first">#FFD700</color>  <!-- Gold -->

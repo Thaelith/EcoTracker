@@ -39,6 +39,7 @@ class ScanViewModel @Inject constructor(
 
             when (val result = repository.fetchProductByBarcode(barcode)) {
                 is Resource.NeedsInput -> {
+                    _scanState.postValue(result)
                     _showInputPrompt.postValue(result.barcode)
                 }
                 is Resource.Error -> {
@@ -79,6 +80,11 @@ class ScanViewModel @Inject constructor(
 
     fun onInputPromptShown() {
         _showInputPrompt.value = null
+    }
+
+    fun cancelInputPrompt() {
+        _showInputPrompt.value = null
+        _scanState.value = null
     }
 
     fun onProductSavedToastShown() {

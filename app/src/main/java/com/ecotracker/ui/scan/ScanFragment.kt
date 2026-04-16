@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -34,6 +35,7 @@ class ScanFragment : Fragment() {
     private var _binding: FragmentScanBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ScanViewModel by viewModels()
+    private var inputPromptDialog: AlertDialog? = null
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -74,6 +76,8 @@ class ScanFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        inputPromptDialog?.dismiss()
+        inputPromptDialog = null
         super.onDestroyView()
         _binding = null
     }
@@ -159,27 +163,54 @@ class ScanFragment : Fragment() {
     }
 
     private fun showProductHintDialog(barcode: String) {
+        inputPromptDialog?.dismiss()
+
         val dialogView =
             LayoutInflater.from(requireContext()).inflate(R.layout.dialog_product_hint, null)
         val etHint =
             dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etProductHint)
+        val btnSearch =
+            dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSearchWithAi)
+        val btnCancel =
+            dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancelAiSearch)
 
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.dialog_ai_title))
             .setIcon(R.drawable.ic_ai_stars)
             .setView(dialogView)
-            .setPositiveButton(getString(R.string.dialog_ai_search_btn)) { _, _ ->
-                val hintText = etHint.text.toString().trim()
-                if (hintText.isNotEmpty()) {
-                    viewModel.estimateWithUserInput(barcode, hintText)
-                } else {
-                    requireContext().toast(getString(R.string.dialog_ai_empty_hint))
-                }
+            .create()
+
+        dialog.setCancelable(false)
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.setOnDismissListener {
+            if (inputPromptDialog === dialog) {
+                inputPromptDialog = null
             }
-            .setNegativeButton(getString(R.string.dialog_ai_cancel_btn), null)
-            .show()
+        }
+
+        btnSearch.setOnClickListener {
+            val hintText = etHint.text.toString().trim()
+            if (hintText.isNotEmpty()) {
+                dialog.dismiss()
+                viewModel.estimateWithUserInput(barcode, hintText)
+            } else {
+                requireContext().toast(getString(R.string.dialog_ai_empty_hint))
+            }
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+            viewModel.cancelInputPrompt()
+        }
+
+        dialog.show()
+
+        dialog.window?.setBackgroundDrawable(
+            ContextCompat.getDrawable(requireContext(), R.drawable.bg_dialog_surface)
+        )
 
         etHint.requestFocus()
+        inputPromptDialog = dialog
     }
 
     private fun checkCameraAndScan() {
