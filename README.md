@@ -1,16 +1,16 @@
 # EcoTracker
 
-EcoTracker is an Android application for scanning product barcodes, estimating product carbon impact, and keeping a personal history of saved results. The project combines on-device persistence with public product data sources and Firebase-backed user features so a user can scan, review, save, and revisit environmental impact data in a single flow.
+EcoTracker is an Android application for scanning product barcodes, estimating product carbon impact, and keeping a personal history of saved results. The project combines on-device persistence with public product data sources and Firebase-backed user features so users can scan, review, save, and revisit environmental impact data in a single flow.
 
-It was built as a portfolio-quality Android project with a focus on practical architecture, defensive fallbacks, and a complete user experience rather than a single isolated feature.
+It was built as a portfolio Android project focused on practical architecture, defensive fallbacks, and a complete user experience rather than a single isolated feature.
 
-![EcoTracker logo](app/src/main/logo-playstore.png)
+![EcoTracker logo](assets/branding/logo-playstore.png)
 
 ## Project Overview
 
 EcoTracker starts with a barcode scan and tries to resolve a usable product result from multiple sources. When structured product data is available, the app uses it directly. When data is incomplete, it can fall back to cached results, secondary APIs, and optional AI-assisted estimation. Saved scans feed into local history, weekly statistics, profile progress, achievements, and a community leaderboard.
 
-The result is an app that covers:
+The app covers:
 
 - product lookup
 - fallback handling for incomplete data
@@ -114,7 +114,7 @@ The app prefers stronger matches first and falls back to weaker candidates only 
 
 ## Testing and Quality Work
 
-The repository includes both unit and instrumentation coverage for logic that is easy to regress:
+The project includes unit and instrumentation coverage for logic that is easy to regress:
 
 - Unit tests for repository lookup behavior and save flow
 - Unit tests for carbon calculation logic
@@ -153,7 +153,7 @@ Not every product has reliable carbon data. The app uses estimation as an assist
 
 - Carbon impact quality depends on external product datasets and, for some results, estimation rather than verified lifecycle analysis.
 - Firestore sync is partial; the app stores local history on-device and syncs selected user and leaderboard-related data for authenticated users.
-- Some profile and achievement flows are functionally complete but still tighter candidates for future architecture cleanup.
+- Some profile and achievement flows work end to end, but they are still good candidates for future architecture cleanup.
 - The app currently targets email/password authentication only.
 - API availability and response quality can vary because the project depends on public product data providers.
 
@@ -168,8 +168,8 @@ Not every product has reliable carbon data. The app uses estimation as an assist
 ### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
-cd EcoScanner
+git clone <repo-url>
+cd EcoTracker
 ```
 
 ### 2. Configure local properties
