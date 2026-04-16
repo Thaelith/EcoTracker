@@ -26,6 +26,9 @@
     <color name="eco_score_na">#9e9e9e</color>
 
     <color name="eco_green">#388E3C</color>
+    <color name="impact_low">#2E7D32</color>
+    <color name="impact_medium">#C98A1A</color>
+    <color name="impact_high">#C23B22</color>
 
     <!-- Bottom nav selector -->
     <color name="bottom_nav_selected">@color/md_theme_primary</color>

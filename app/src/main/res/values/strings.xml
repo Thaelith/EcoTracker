@@ -23,6 +23,10 @@
     <string name="label_week">This Week</string>
     <string name="label_total_scans">Total Products Scanned</string>
     <string name="chart_title">Daily Carbon Footprint (last 7 days)</string>
+    <string name="chart_legend_caption">Bar color shows daily impact level</string>
+    <string name="impact_low_label">Low (0-2 kg)</string>
+    <string name="impact_medium_label">Medium (2-5 kg)</string>
+    <string name="impact_high_label">High (5+ kg)</string>
 
     <!-- Comparison screen -->
     <string name="title_comparison">Product Comparison</string>

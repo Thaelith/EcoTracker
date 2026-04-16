@@ -21,6 +21,12 @@ import java.util.*
 @AndroidEntryPoint
 class StatisticsFragment : Fragment() {
 
+    private enum class ImpactLevel {
+        LOW,
+        MEDIUM,
+        HIGH
+    }
+
     private var _binding: FragmentStatisticsBinding? = null
     private val binding get() = _binding!!
     private val viewModel: StatisticsViewModel by viewModels()
@@ -44,16 +50,23 @@ class StatisticsFragment : Fragment() {
             legend.isEnabled = false
             setDrawGridBackground(false)
             setDrawBorders(false)
+            setFitBars(true)
+            extraBottomOffset = 8f
 
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
                 setDrawGridLines(false)
                 granularity = 1f
+                textColor = requireContext().getColor(R.color.on_surface_variant)
+                textSize = 11f
             }
 
             axisLeft.apply {
                 setDrawGridLines(true)
                 axisMinimum = 0f
+                textColor = requireContext().getColor(R.color.on_surface_variant)
+                textSize = 11f
+                gridColor = requireContext().getColor(R.color.md_theme_surface_variant)
             }
 
             axisRight.isEnabled = false
@@ -105,17 +118,39 @@ class StatisticsFragment : Fragment() {
             }
 
             val dataSet = BarDataSet(entries, "Carbon Footprint").apply {
-                color = requireContext().getColor(R.color.md_theme_primary)
+                colors = entries.map { entry ->
+                    when (resolveImpactLevel(entry.y)) {
+                        ImpactLevel.LOW -> requireContext().getColor(R.color.impact_low)
+                        ImpactLevel.MEDIUM -> requireContext().getColor(R.color.impact_medium)
+                        ImpactLevel.HIGH -> requireContext().getColor(R.color.impact_high)
+                    }
+                }
                 valueTextSize = 10f
                 setDrawValues(false)
+                highLightAlpha = 0
             }
 
             binding.barChart.apply {
                 xAxis.valueFormatter = IndexAxisValueFormatter(labels)
-                data = BarData(dataSet)
+                data = BarData(dataSet).apply {
+                    barWidth = 0.56f
+                }
                 invalidate() // refresh
             }
         }
+    }
+
+    private fun resolveImpactLevel(totalCarbonKg: Float): ImpactLevel {
+        return when {
+            totalCarbonKg <= LOW_IMPACT_MAX_KG -> ImpactLevel.LOW
+            totalCarbonKg <= MEDIUM_IMPACT_MAX_KG -> ImpactLevel.MEDIUM
+            else -> ImpactLevel.HIGH
+        }
+    }
+
+    companion object {
+        private const val LOW_IMPACT_MAX_KG = 2f
+        private const val MEDIUM_IMPACT_MAX_KG = 5f
     }
 
     override fun onDestroyView() {
