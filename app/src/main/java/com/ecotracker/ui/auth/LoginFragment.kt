@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.ecotracker.R
@@ -20,7 +19,8 @@ class LoginFragment : Fragment() {
     private lateinit var auth: FirebaseAuth
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentLoginBinding.inflate(inflater, container, false)
@@ -36,11 +36,13 @@ class LoginFragment : Fragment() {
         }
 
         binding.btnLogin.setOnClickListener {
+            clearError()
+
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
+                showError(getString(R.string.auth_error_empty_login))
                 return@setOnClickListener
             }
 
@@ -51,7 +53,12 @@ class LoginFragment : Fragment() {
                     if (task.isSuccessful) {
                         (activity as? AuthActivity)?.navigateToMain()
                     } else {
-                        Toast.makeText(context, "Login failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                        showError(
+                            getString(
+                                R.string.auth_error_login_failed,
+                                task.exception?.localizedMessage ?: getString(R.string.error_unknown)
+                            )
+                        )
                     }
                 }
         }
@@ -60,8 +67,21 @@ class LoginFragment : Fragment() {
     private fun setLoading(isLoading: Boolean) {
         binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         binding.btnLogin.isEnabled = !isLoading
+        binding.btnLogin.text =
+            getString(if (isLoading) R.string.auth_loading_sign_in else R.string.auth_login_button)
         binding.etEmail.isEnabled = !isLoading
         binding.etPassword.isEnabled = !isLoading
+        binding.tvGoToRegister.isEnabled = !isLoading
+    }
+
+    private fun showError(message: String) {
+        binding.errorPanel.visibility = View.VISIBLE
+        binding.tvErrorMessage.text = message
+    }
+
+    private fun clearError() {
+        binding.errorPanel.visibility = View.GONE
+        binding.tvErrorMessage.text = ""
     }
 
     override fun onDestroyView() {

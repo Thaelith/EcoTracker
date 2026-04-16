@@ -1,25 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="176dp"
-    android:background="@color/md_theme_primary"
+    android:layout_height="196dp"
+    android:background="@drawable/bg_nav_header"
     android:gravity="bottom"
     android:orientation="vertical"
     android:padding="24dp"
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
     <ImageView
+        android:id="@+id/ivNavLogo"
         android:layout_width="64dp"
         android:layout_height="64dp"
         android:src="@mipmap/ic_launcher_round" />
 
     <TextView
+        android:id="@+id/tvNavTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="8dp"
-        android:text="EcoTracker"
+        android:text="@string/nav_header_title"
         android:textColor="@android:color/white"
         android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvNavSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/nav_header_subtitle"
+        android:textColor="#D9FFFFFF"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tvNavUser"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_subtle_chip"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="5dp"
+        android:text="@string/nav_header_signed_in"
+        android:textColor="@color/md_theme_primary"
+        android:textSize="12sp"
         android:textStyle="bold" />
 
 </LinearLayout>

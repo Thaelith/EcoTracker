@@ -59,26 +59,28 @@ class LeaderboardFragment : Fragment() {
                     when (resource) {
                         is Resource.Success -> {
                             binding.swipeRefresh.isRefreshing = false
-                            binding.progressBar.visibility = View.GONE
+                            binding.loadingState.visibility = View.GONE
+                            binding.errorState.visibility = View.GONE
                             val users = resource.data ?: emptyList()
                             adapter.submitList(users)
                             binding.emptyState.visibility = if (users.isEmpty()) View.VISIBLE else View.GONE
+                            binding.rvLeaderboard.visibility = if (users.isEmpty()) View.GONE else View.VISIBLE
                         }
                         is Resource.Error -> {
                             binding.swipeRefresh.isRefreshing = false
-                            binding.progressBar.visibility = View.GONE
-                            binding.emptyState.visibility = View.VISIBLE
-                            com.google.android.material.snackbar.Snackbar.make(
-                                binding.root,
-                                resource.message,
-                                com.google.android.material.snackbar.Snackbar.LENGTH_LONG
-                            ).show()
+                            binding.loadingState.visibility = View.GONE
+                            binding.emptyState.visibility = View.GONE
+                            binding.rvLeaderboard.visibility = View.GONE
+                            binding.errorState.visibility = View.VISIBLE
+                            binding.tvErrorMessage.text = resource.message
                         }
                         is Resource.Loading -> {
                             if (!binding.swipeRefresh.isRefreshing) {
-                                binding.progressBar.visibility = View.VISIBLE
+                                binding.loadingState.visibility = View.VISIBLE
+                                binding.rvLeaderboard.visibility = View.GONE
                             }
                             binding.emptyState.visibility = View.GONE
+                            binding.errorState.visibility = View.GONE
                         }
                         else -> {}
                     }

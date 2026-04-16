@@ -11,6 +11,7 @@ import androidx.navigation.ui.navigateUp
 import android.content.Intent
 import com.ecotracker.R
 import com.ecotracker.databinding.ActivityMainBinding
+import com.google.android.material.textview.MaterialTextView
 import com.ecotracker.ui.auth.AuthActivity
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,7 +21,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
-
     private lateinit var appBarConfig: AppBarConfiguration
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +28,16 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(true)
+        bindDrawerHeader()
         setupNavigation()
+    }
+
+    private fun bindDrawerHeader() {
+        val headerView = binding.navView.getHeaderView(0)
+        val tvNavUser = headerView.findViewById<MaterialTextView>(R.id.tvNavUser)
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        tvNavUser.text = currentUser?.email ?: getString(R.string.nav_header_signed_in)
     }
 
     private fun setupNavigation() {
@@ -46,10 +55,13 @@ class MainActivity : AppCompatActivity() {
 
         appBarConfig = AppBarConfiguration(topLevelDestinations, binding.drawerLayout)
         setupActionBarWithNavController(navController, appBarConfig)
-        
+
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            supportActionBar?.title = destination.label
+        }
+
         binding.navView.setupWithNavController(navController)
-        
-        // Handle custom drawer items
+
         binding.navView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_logout -> {
@@ -61,7 +73,6 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 else -> {
-                    // Let Navigation UI handle other items like the Profile Fragment
                     androidx.navigation.ui.NavigationUI.onNavDestinationSelected(menuItem, navController)
                     binding.drawerLayout.close()
                     true

@@ -6,6 +6,21 @@
     <string name="title_scan">Scan</string>
     <string name="title_history">History</string>
     <string name="title_statistics">Statistics</string>
+    <string name="title_achievements">Achievements</string>
+    <string name="title_profile">Profile</string>
+    <string name="title_leaderboard">Leaderboard</string>
+    <string name="title_manual_entry">Manual Entry</string>
+    <string name="title_login">Sign In</string>
+    <string name="title_register">Create Account</string>
+    <string name="title_username_setup">Finish Setup</string>
+
+    <!-- App shell -->
+    <string name="nav_header_title">EcoTracker</string>
+    <string name="nav_header_subtitle">Track product impact with confidence.</string>
+    <string name="nav_header_signed_in">Signed in</string>
+    <string name="nav_account_section">Account</string>
+    <string name="action_logout">Sign Out</string>
+    <string name="label_you">You</string>
 
     <!-- Scan screen -->
     <string name="scan_hint">Tap the button to scan a barcode</string>
@@ -82,7 +97,6 @@
     <string name="comparison_back_description">Go back</string>
 
     <!-- Achievements screen -->
-    <string name="title_achievements">My Achievements</string>
     <string name="achievements_subtitle">Unlock badges on your journey to a greener planet</string>
     
     <!-- Ranks -->
@@ -113,9 +127,28 @@
     <string name="profile_photo_choose">Choose Photo</string>
     <string name="profile_photo_change">Change Photo</string>
     <string name="profile_photo_error">Could not use that image. Please choose a different photo.</string>
+    <string name="profile_title">Profile</string>
+    <string name="profile_subtitle">Your identity, rank, and recent progress in one place.</string>
+    <string name="profile_identity_title">Account</string>
+    <string name="profile_rank_supporting">Progress increases as you save more product scans.</string>
+    <string name="profile_badges_empty">Recent achievements will appear here after you unlock badges.</string>
+    <string name="profile_badge_content_description">Achievement badge</string>
+    <string name="profile_badges_title">Recent Achievements</string>
+    <string name="profile_badges_subtitle">Latest milestones from your saved scan history.</string>
+    <string name="profile_rank_progress">%1$d%% complete</string>
     
     <!-- Leaderboard menu -->
     <string name="menu_leaderboard">Leaderboard</string>
+    <string name="leaderboard_title">Leaderboard</string>
+    <string name="leaderboard_subtitle">See how your saved scan activity compares with the community.</string>
+    <string name="leaderboard_loading_title">Loading leaderboard</string>
+    <string name="leaderboard_loading_subtitle">Refreshing latest rankings.</string>
+    <string name="leaderboard_empty_title">No rankings yet</string>
+    <string name="leaderboard_empty_subtitle">The leaderboard will appear once users begin saving scans.</string>
+    <string name="leaderboard_error_title">Couldn\'t load the leaderboard</string>
+    <string name="leaderboard_error_subtitle">Pull to refresh or try again in a moment.</string>
+    <string name="leaderboard_current_user">You</string>
+    <string name="leaderboard_rank_label">Rank %1$d</string>
     
     <!-- Manual Entry -->
     <string name="label_barcode_format">Barcode: %s</string>
@@ -136,4 +169,32 @@
     <string name="error_ai_failed">Could not identify the product. Try adding more detail.</string>
     <string name="content_description_co2">Carbon impact</string>
     <string name="content_description_history_empty">No saved scans</string>
+    <string name="auth_brand_title">EcoTracker</string>
+    <string name="login_headline">Sign in to continue tracking product impact.</string>
+    <string name="register_headline">Create your account to save scans and compare products.</string>
+    <string name="username_headline">Choose the name shown on your profile and leaderboard.</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_confirm_password_label">Confirm password</string>
+    <string name="auth_username_label">Username</string>
+    <string name="auth_login_button">Sign In</string>
+    <string name="auth_register_button">Create Account</string>
+    <string name="auth_username_button">Save and Continue</string>
+    <string name="auth_switch_to_register">Don\'t have an account? Create one</string>
+    <string name="auth_switch_to_login">Already have an account? Sign in</string>
+    <string name="auth_loading_sign_in">Signing in…</string>
+    <string name="auth_loading_register">Creating account…</string>
+    <string name="auth_loading_username">Saving profile…</string>
+    <string name="auth_error_title">Check your details</string>
+    <string name="auth_error_empty_login">Enter your email and password.</string>
+    <string name="auth_error_empty_register">Complete all required fields.</string>
+    <string name="auth_error_password_mismatch">Passwords do not match.</string>
+    <string name="auth_error_password_short">Password must be at least 6 characters.</string>
+    <string name="auth_error_empty_username">Enter a username.</string>
+    <string name="auth_error_username_length">Username must be %1$d characters or fewer.</string>
+    <string name="auth_error_login_failed">Sign in failed: %1$s</string>
+    <string name="auth_error_register_failed">Registration failed: %1$s</string>
+    <string name="auth_error_username_failed">Failed to save username: %1$s</string>
+    <string name="auth_success_register">Account created. Finish setting up your profile.</string>
+    <string name="auth_success_username">Profile saved.</string>
 </resources>

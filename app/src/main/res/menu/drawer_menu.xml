@@ -16,19 +16,19 @@
         <item
             android:id="@+id/achievementsFragment"
             android:icon="@drawable/ic_quests"
-            android:title="Achievements" />
+            android:title="@string/title_achievements" />
         <item
             android:id="@+id/leaderboardFragment"
             android:icon="@drawable/ic_leaderboard"
             android:title="@string/menu_leaderboard" />
     </group>
 
-    <item android:title="Account">
+    <item android:title="@string/nav_account_section">
         <menu>
             <item
                 android:id="@+id/profileFragment"
                 android:icon="@drawable/ic_profile"
-                android:title="Profile" />
+                android:title="@string/title_profile" />
         </menu>
     </item>
 
@@ -36,6 +36,6 @@
         <item
             android:id="@+id/action_logout"
             android:icon="@drawable/ic_logout"
-            android:title="Logout" />
+            android:title="@string/action_logout" />
     </group>
 </menu>

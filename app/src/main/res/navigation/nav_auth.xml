@@ -8,7 +8,7 @@
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.ecotracker.ui.auth.LoginFragment"
-        android:label="Login"
+        android:label="@string/title_login"
         tools:layout="@layout/fragment_login">
         <action
             android:id="@+id/action_loginFragment_to_registerFragment"
@@ -18,7 +18,7 @@
     <fragment
         android:id="@+id/registerFragment"
         android:name="com.ecotracker.ui.auth.RegisterFragment"
-        android:label="Register"
+        android:label="@string/title_register"
         tools:layout="@layout/fragment_register">
         <action
             android:id="@+id/action_registerFragment_to_usernameFragment"
@@ -28,7 +28,7 @@
     <fragment
         android:id="@+id/usernameFragment"
         android:name="com.ecotracker.ui.auth.UsernameFragment"
-        android:label="Set Username"
+        android:label="@string/title_username_setup"
         tools:layout="@layout/fragment_username" />
 
 </navigation>

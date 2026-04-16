@@ -42,8 +42,11 @@ class LeaderboardAdapter : ListAdapter<LeaderboardUser, LeaderboardAdapter.Leade
             if (user.uid == currentUserId) {
                 binding.cardUser.strokeWidth = context.resources.getDimensionPixelSize(R.dimen.active_user_stroke_width)
                 binding.cardUser.setStrokeColor(ContextCompat.getColorStateList(context, R.color.md_theme_primary))
+                binding.tvCurrentUser.visibility = View.VISIBLE
             } else {
-                binding.cardUser.strokeWidth = 0
+                binding.cardUser.strokeWidth = 1
+                binding.cardUser.setStrokeColor(ContextCompat.getColorStateList(context, R.color.md_theme_surface_variant))
+                binding.tvCurrentUser.visibility = View.GONE
             }
 
             // Top 3 Highlights

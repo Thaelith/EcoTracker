@@ -32,7 +32,7 @@
     <fragment
         android:id="@+id/manualEntryFragment"
         android:name="com.ecotracker.ui.manual.ManualEntryFragment"
-        android:label="Manual Product Entry"
+        android:label="@string/title_manual_entry"
         tools:layout="@layout/fragment_manual_entry" >
         <argument
             android:name="barcode"
@@ -42,25 +42,25 @@
     <fragment
         android:id="@+id/achievementsFragment"
         android:name="com.ecotracker.ui.achievements.AchievementsFragment"
-        android:label="Achievements"
+        android:label="@string/title_achievements"
         tools:layout="@layout/fragment_achievements" />
 
     <fragment
         android:id="@+id/comparisonFragment"
         android:name="com.ecotracker.ui.comparison.ComparisonFragment"
-        android:label="Product Comparison"
+        android:label="@string/title_comparison"
         tools:layout="@layout/fragment_comparison" />
 
     <fragment
         android:id="@+id/profileFragment"
         android:name="com.ecotracker.ui.profile.ProfileFragment"
-        android:label="Profile"
+        android:label="@string/title_profile"
         tools:layout="@layout/fragment_profile" />
 
     <fragment
         android:id="@+id/leaderboardFragment"
         android:name="com.ecotracker.ui.leaderboard.LeaderboardFragment"
-        android:label="Global Leaderboard"
+        android:label="@string/title_leaderboard"
         tools:layout="@layout/fragment_leaderboard" />
 
 </navigation>

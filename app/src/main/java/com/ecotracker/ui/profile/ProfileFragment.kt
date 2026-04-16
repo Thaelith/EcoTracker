@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -21,6 +22,7 @@ import com.bumptech.glide.Glide
 import com.ecotracker.R
 import com.ecotracker.databinding.FragmentProfileBinding
 import com.ecotracker.utils.Badge
+import com.google.android.material.card.MaterialCardView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -78,6 +80,8 @@ class ProfileFragment : Fragment() {
                     binding.tvUsername.text = state.username
                     binding.tvRankName.text = getString(state.rankNameResId)
                     binding.pbRankProgress.progress = state.rankProgress
+                    binding.tvRankProgress.text =
+                        getString(R.string.profile_rank_progress, state.rankProgress)
                     binding.tvScanCountProgress.text =
                         getString(R.string.label_scan_count, state.scanCount)
                     binding.btnSelectProfilePhoto.text = getString(
@@ -139,18 +143,55 @@ class ProfileFragment : Fragment() {
 
     private fun updateBadgesPreview(unlockedBadges: List<Badge>) {
         binding.layoutBadgesPreview.removeAllViews()
+        binding.tvBadgesEmpty.visibility = if (unlockedBadges.isEmpty()) View.VISIBLE else View.GONE
 
         unlockedBadges.forEach { badge ->
-            val imageView = ImageView(context).apply {
-                layoutParams = LinearLayout.LayoutParams(120, 120).apply {
+            val context = requireContext()
+            val card = MaterialCardView(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    resources.getDimensionPixelSize(R.dimen.profile_badge_card_width),
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
                     setMargins(0, 0, 16, 0)
                 }
+                radius = resources.getDimension(R.dimen.profile_badge_card_radius)
+                cardElevation = 0f
+                strokeWidth = 1
+                setCardBackgroundColor(ContextCompat.getColor(context, R.color.md_theme_surface))
+                setStrokeColor(ContextCompat.getColor(context, R.color.md_theme_surface_variant))
+            }
+
+            val content = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(20, 20, 20, 20)
+            }
+
+            val imageView = ImageView(context).apply {
+                layoutParams = LinearLayout.LayoutParams(56, 56)
                 setImageResource(badge.iconResId ?: R.drawable.ic_quests)
                 imageTintList = ColorStateList.valueOf(
                     ContextCompat.getColor(context, R.color.eco_green)
                 )
+                contentDescription = getString(R.string.profile_badge_content_description)
             }
-            binding.layoutBadgesPreview.addView(imageView)
+
+            val titleView = TextView(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 14
+                }
+                text = getString(badge.nameResId)
+                setTextColor(ContextCompat.getColor(context, R.color.on_surface))
+                textSize = 14f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+            }
+
+            content.addView(imageView)
+            content.addView(titleView)
+            card.addView(content)
+            binding.layoutBadgesPreview.addView(card)
         }
     }
 

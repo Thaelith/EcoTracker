@@ -4,9 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.ecotracker.R
 import com.ecotracker.databinding.FragmentUsernameBinding
+import com.ecotracker.utils.toast
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,7 +21,8 @@ class UsernameFragment : Fragment() {
     private lateinit var firestore: FirebaseFirestore
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentUsernameBinding.inflate(inflater, container, false)
@@ -33,24 +35,30 @@ class UsernameFragment : Fragment() {
         firestore = FirebaseFirestore.getInstance()
 
         binding.btnSave.setOnClickListener {
+            clearError()
+
             val rawUsername = binding.etUsername.text.toString().trim()
             val username = rawUsername.replace(Regex("[^a-zA-Z0-9_ \\-]"), "")
 
             if (username.isEmpty()) {
-                Toast.makeText(context, "Please enter a username", Toast.LENGTH_SHORT).show()
+                showError(getString(R.string.auth_error_empty_username))
                 return@setOnClickListener
             }
 
             if (username.length > com.ecotracker.utils.AppConfig.USERNAME_MAX_LENGTH) {
-                Toast.makeText(context, "Username must be ${com.ecotracker.utils.AppConfig.USERNAME_MAX_LENGTH} characters or less", Toast.LENGTH_SHORT).show()
+                showError(
+                    getString(
+                        R.string.auth_error_username_length,
+                        com.ecotracker.utils.AppConfig.USERNAME_MAX_LENGTH
+                    )
+                )
                 return@setOnClickListener
             }
 
             val userId = auth.currentUser?.uid ?: return@setOnClickListener
 
             setLoading(true)
-            
-            // Create a user profile in Firestore
+
             val userProfile = hashMapOf(
                 "username" to username,
                 "co2e" to 0.0,
@@ -62,12 +70,17 @@ class UsernameFragment : Fragment() {
                 .set(userProfile)
                 .addOnSuccessListener {
                     setLoading(false)
-                    Toast.makeText(context, "Username saved!", Toast.LENGTH_SHORT).show()
+                    requireContext().toast(getString(R.string.auth_success_username))
                     (activity as? AuthActivity)?.navigateToMain()
                 }
                 .addOnFailureListener { e ->
                     setLoading(false)
-                    Toast.makeText(context, "Failed to save username: ${e.message}", Toast.LENGTH_LONG).show()
+                    showError(
+                        getString(
+                            R.string.auth_error_username_failed,
+                            e.localizedMessage ?: getString(R.string.error_unknown)
+                        )
+                    )
                 }
         }
     }
@@ -75,7 +88,21 @@ class UsernameFragment : Fragment() {
     private fun setLoading(isLoading: Boolean) {
         binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         binding.btnSave.isEnabled = !isLoading
+        binding.btnSave.text = getString(
+            if (isLoading) R.string.auth_loading_username
+            else R.string.auth_username_button
+        )
         binding.etUsername.isEnabled = !isLoading
+    }
+
+    private fun showError(message: String) {
+        binding.errorPanel.visibility = View.VISIBLE
+        binding.tvErrorMessage.text = message
+    }
+
+    private fun clearError() {
+        binding.errorPanel.visibility = View.GONE
+        binding.tvErrorMessage.text = ""
     }
 
     override fun onDestroyView() {

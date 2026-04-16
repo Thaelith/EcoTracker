@@ -2,4 +2,6 @@
 <resources>
     <dimen name="active_user_stroke_width">3dp</dimen>
     <dimen name="profile_photo_placeholder_padding">28dp</dimen>
+    <dimen name="profile_badge_card_width">132dp</dimen>
+    <dimen name="profile_badge_card_radius">18dp</dimen>
 </resources>

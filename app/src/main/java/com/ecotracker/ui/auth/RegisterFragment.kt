@@ -4,11 +4,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.ecotracker.R
 import com.ecotracker.databinding.FragmentRegisterBinding
+import com.ecotracker.utils.toast
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -20,7 +20,8 @@ class RegisterFragment : Fragment() {
     private lateinit var auth: FirebaseAuth
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
@@ -36,23 +37,25 @@ class RegisterFragment : Fragment() {
         }
 
         binding.btnRegister.setOnClickListener {
+            clearError()
+
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
             val confirm = binding.etConfirmPassword.text.toString().trim()
 
-            if (email.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
-                Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (password != confirm) {
-                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (password.length < 6) {
-                Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            when {
+                email.isEmpty() || password.isEmpty() || confirm.isEmpty() -> {
+                    showError(getString(R.string.auth_error_empty_register))
+                    return@setOnClickListener
+                }
+                password != confirm -> {
+                    showError(getString(R.string.auth_error_password_mismatch))
+                    return@setOnClickListener
+                }
+                password.length < 6 -> {
+                    showError(getString(R.string.auth_error_password_short))
+                    return@setOnClickListener
+                }
             }
 
             setLoading(true)
@@ -60,10 +63,15 @@ class RegisterFragment : Fragment() {
                 .addOnCompleteListener { task ->
                     setLoading(false)
                     if (task.isSuccessful) {
-                        Toast.makeText(context, "Registration successful!", Toast.LENGTH_SHORT).show()
+                        requireContext().toast(getString(R.string.auth_success_register))
                         findNavController().navigate(R.id.action_registerFragment_to_usernameFragment)
                     } else {
-                        Toast.makeText(context, "Registration failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                        showError(
+                            getString(
+                                R.string.auth_error_register_failed,
+                                task.exception?.localizedMessage ?: getString(R.string.error_unknown)
+                            )
+                        )
                     }
                 }
         }
@@ -72,9 +80,23 @@ class RegisterFragment : Fragment() {
     private fun setLoading(isLoading: Boolean) {
         binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         binding.btnRegister.isEnabled = !isLoading
+        binding.btnRegister.text = getString(
+            if (isLoading) R.string.auth_loading_register else R.string.auth_register_button
+        )
         binding.etEmail.isEnabled = !isLoading
         binding.etPassword.isEnabled = !isLoading
         binding.etConfirmPassword.isEnabled = !isLoading
+        binding.tvGoToLogin.isEnabled = !isLoading
+    }
+
+    private fun showError(message: String) {
+        binding.errorPanel.visibility = View.VISIBLE
+        binding.tvErrorMessage.text = message
+    }
+
+    private fun clearError() {
+        binding.errorPanel.visibility = View.GONE
+        binding.tvErrorMessage.text = ""
     }
 
     override fun onDestroyView() {

@@ -31,7 +31,8 @@ class AuthActivity : AppCompatActivity() {
         binding = ActivityAuthBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
-        
+        supportActionBar?.setDisplayShowTitleEnabled(true)
+
         setupNavigation()
     }
 
@@ -42,6 +43,9 @@ class AuthActivity : AppCompatActivity() {
 
         val appBarConfig = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfig)
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            supportActionBar?.title = destination.label
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean =
