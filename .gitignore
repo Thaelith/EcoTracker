@@ -1,17 +1,23 @@
 *.iml
-.gradle
-/local.properties
-/.idea/
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-build/
 *.log
 
-# Firebase & Secrets
+# Local IDE and tool metadata
+.idea/
+.vscode/
+.gemini/
+.gradle/
+.kotlin/
+
+# Local Android / Gradle files
+local.properties
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Firebase and secrets
 app/google-services.json
 serviceAccountKey.json
 *.jks
@@ -19,7 +25,3 @@ serviceAccountKey.json
 .env
 .env.*
 .firebase/
-# Tool Metadata
-.gemini/
-.kotlin/
-.vscode/
