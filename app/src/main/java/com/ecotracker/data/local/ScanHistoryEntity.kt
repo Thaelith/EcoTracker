@@ -15,11 +15,15 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["barcode"])]
+    indices = [
+        Index(value = ["barcode"]),
+        Index(value = ["userId", "scannedAt"])
+    ]
 )
 data class ScanHistoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val userId: String,
     val barcode: String,
     val scannedAt: Long = System.currentTimeMillis()
 )

@@ -2,6 +2,7 @@ package com.ecotracker.data.repository
 
 import android.content.SharedPreferences
 import com.ecotracker.data.local.EstimationStatus
+import com.ecotracker.data.local.EcoTrackerDatabase
 import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.local.ScannedProductDao
@@ -23,9 +24,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -45,6 +45,7 @@ class EcoTrackerRepository @Inject constructor(
     companion object {
         private const val TAG = "EcoRepo"
         private const val PROFILE_PHOTO_KEY_PREFIX = "profile_photo_uri_"
+        private const val GUEST_USER_ID = "__guest__"
     }
 
     suspend fun fetchProductByBarcode(barcode: String): Resource<ScannedProduct> = coroutineScope {
@@ -287,6 +288,7 @@ class EcoTrackerRepository @Inject constructor(
         dao.upsertCachedProduct(product.toCachedProductEntity(updatedAt = product.timestamp))
         val id = dao.insertScanHistory(
             ScanHistoryEntity(
+                userId = currentUserKey(),
                 barcode = product.barcode,
                 scannedAt = product.timestamp
             )
@@ -312,7 +314,7 @@ class EcoTrackerRepository @Inject constructor(
                     "timestamp" to product.timestamp
                 )
                 scanRef.set(scanData, SetOptions.merge()).await()
-                syncCurrentUserStats(userRef)
+                syncRemoteStatsFromUserScans(userRef)
             } catch (e: Exception) {
                 Logger.error(TAG, "Firestore sync failed during save", e)
             }
@@ -326,19 +328,29 @@ class EcoTrackerRepository @Inject constructor(
         return saveProduct(product, remoteId)
     }
 
-    suspend fun deleteProduct(product: ScannedProduct) = dao.deleteScanHistoryById(product.id)
+    suspend fun deleteProduct(product: ScannedProduct) {
+        dao.deleteScanHistoryById(currentUserKey(), product.id)
+        deleteRemoteScanAndSync(product)
+    }
 
-    suspend fun deleteProductById(id: Long) = dao.deleteScanHistoryById(id)
+    suspend fun deleteProductById(id: Long) {
+        val userId = currentUserKey()
+        val product = dao.getProductByHistoryId(userId, id)
+        dao.deleteScanHistoryById(userId, id)
+        if (product != null) {
+            deleteRemoteScanAndSync(product)
+        }
+    }
 
-    fun getAllProducts(): Flow<List<ScannedProduct>> = dao.getAllProducts()
+    fun getAllProducts(): Flow<List<ScannedProduct>> = dao.getAllProducts(currentUserKey())
 
     fun getProductsSince(startTime: Long): Flow<List<ScannedProduct>> =
-        dao.getProductsSince(startTime)
+        dao.getProductsSince(currentUserKey(), startTime)
 
     fun getTotalCarbonSince(startTime: Long): Flow<Double?> =
-        dao.getTotalCarbonSince(startTime)
+        dao.getTotalCarbonSince(currentUserKey(), startTime)
 
-    fun getTotalScannedCount(): Flow<Int> = dao.getTotalScannedCount()
+    fun getTotalScannedCount(): Flow<Int> = dao.getTotalScannedCount(currentUserKey())
 
     suspend fun getProductByBarcode(barcode: String): ScannedProduct? =
         dao.getCachedProductByBarcode(barcode)?.toScannedProduct()
@@ -378,36 +390,22 @@ class EcoTrackerRepository @Inject constructor(
     }
 
     suspend fun deleteAllProducts() {
-        dao.deleteAllScanHistory()
+        dao.deleteAllScanHistory(currentUserKey())
         dao.deleteAllCachedProducts()
     }
 
-    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> {
-        val remoteLeaderboard = observeRemoteLeaderboard()
-        val currentUserId = auth.currentUser?.uid ?: return remoteLeaderboard
-
-        return combine(
-            remoteLeaderboard,
-            dao.getTotalScannedCount(),
-            dao.getTotalCarbon()
-        ) { leaderboardResource, localScanCount, localCarbon ->
-            when (leaderboardResource) {
-                is Resource.Success -> {
-                    Resource.Success(
-                        overlayCurrentUserLeaderboardStats(
-                            users = leaderboardResource.data,
-                            currentUserId = currentUserId,
-                            localScanCount = localScanCount,
-                            localCarbon = localCarbon ?: 0.0
-                        )
-                    )
-                }
-
-                is Resource.Error -> leaderboardResource
-                is Resource.Loading -> leaderboardResource
-                is Resource.NeedsInput -> leaderboardResource
-            }
+    suspend fun reconcileCurrentUserStats() {
+        val currentUser = auth.currentUser ?: return
+        try {
+            adoptLegacyHistoryIfNeeded(currentUser.uid)
+            syncRemoteStatsFromUserScans(firestore.collection("users").document(currentUser.uid))
+        } catch (e: Exception) {
+            Logger.error(TAG, "Failed to reconcile current user stats", e)
         }
+    }
+
+    fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> {
+        return observeRemoteLeaderboard()
     }
 
     private fun observeRemoteLeaderboard(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> =
@@ -447,35 +445,12 @@ class EcoTrackerRepository @Inject constructor(
             awaitClose { listener.remove() }
         }
 
-    private fun overlayCurrentUserLeaderboardStats(
-        users: List<com.ecotracker.data.model.LeaderboardUser>,
-        currentUserId: String,
-        localScanCount: Int,
-        localCarbon: Double
-    ): List<com.ecotracker.data.model.LeaderboardUser> {
-        val adjustedUsers = users.map { user ->
-            if (user.uid == currentUserId) {
-                user.copy(
-                    scanCount = localScanCount,
-                    co2e = localCarbon
-                )
-            } else {
-                user
-            }
+    private suspend fun syncRemoteStatsFromUserScans(userRef: com.google.firebase.firestore.DocumentReference) {
+        val scanSnapshots = userRef.collection("scans").get().await()
+        val scanCount = scanSnapshots.size()
+        val totalCarbon = scanSnapshots.documents.sumOf { document ->
+            document.getDouble("carbonFootprint") ?: 0.0
         }
-
-        return adjustedUsers
-            .sortedWith(
-                compareByDescending<com.ecotracker.data.model.LeaderboardUser> { it.scanCount }
-                    .thenByDescending { it.co2e }
-                    .thenBy { it.username.lowercase() }
-            )
-            .mapIndexed { index, user -> user.copy(rank = index + 1) }
-    }
-
-    private suspend fun syncCurrentUserStats(userRef: com.google.firebase.firestore.DocumentReference) {
-        val scanCount = dao.getTotalScannedCountValue()
-        val totalCarbon = dao.getTotalCarbonValue() ?: 0.0
         val stats = mutableMapOf<String, Any>(
             "scanCount" to scanCount,
             "co2e" to totalCarbon,
@@ -488,6 +463,78 @@ class EcoTrackerRepository @Inject constructor(
         }
 
         userRef.set(stats, SetOptions.merge()).await()
+    }
+
+    private suspend fun deleteRemoteScanAndSync(product: ScannedProduct) {
+        val firebaseUser = try {
+            auth.currentUser
+        } catch (e: Exception) {
+            Logger.error(TAG, "FirebaseAuth unavailable during delete", e)
+            null
+        } ?: return
+
+        try {
+            val userRef = firestore.collection("users").document(firebaseUser.uid)
+            val remoteId = "${product.barcode}_${product.timestamp}"
+            userRef.collection("scans").document(remoteId).delete().await()
+            syncRemoteStatsFromUserScans(userRef)
+        } catch (e: Exception) {
+            Logger.error(TAG, "Firestore sync failed during delete", e)
+        }
+    }
+
+    private fun currentUserKey(): String {
+        return auth.currentUser?.uid ?: GUEST_USER_ID
+    }
+
+    private suspend fun adoptLegacyHistoryIfNeeded(currentUserId: String) {
+        val currentLocalCount = dao.getTotalScannedCountValue(currentUserId)
+        val legacyLocalCount = dao.getTotalScannedCountValue(EcoTrackerDatabase.LEGACY_USER_ID)
+
+        if (legacyLocalCount == 0) {
+            return
+        }
+
+        if (currentLocalCount > 0) {
+            return
+        }
+
+        val userRef = firestore.collection("users").document(currentUserId)
+        val userSnapshot = userRef.get().await()
+        val remoteScanCount = userRef.collection("scans").get().await().size()
+        val persistedScanCount = userSnapshot.getLong("scanCount")?.toInt() ?: 0
+        val hasHistoricalSignal = remoteScanCount > 0 || persistedScanCount > 0
+        if (!hasHistoricalSignal) {
+            return
+        }
+
+        val legacyProducts = dao.getAllProducts(EcoTrackerDatabase.LEGACY_USER_ID).first()
+        val movedRows = dao.reassignScanHistoryUser(
+            fromUserId = EcoTrackerDatabase.LEGACY_USER_ID,
+            toUserId = currentUserId
+        )
+
+        if (movedRows > 0) {
+            backfillRemoteScans(userRef, legacyProducts)
+            Logger.debug(TAG, "Adopted $movedRows legacy local history rows for $currentUserId")
+        }
+    }
+
+    private suspend fun backfillRemoteScans(
+        userRef: com.google.firebase.firestore.DocumentReference,
+        products: List<ScannedProduct>
+    ) {
+        products.forEach { product ->
+            val remoteId = "${product.barcode}_${product.timestamp}"
+            val scanData = hashMapOf(
+                "barcode" to product.barcode,
+                "productName" to product.productName,
+                "carbonFootprint" to product.carbonFootprint,
+                "status" to product.status.name,
+                "timestamp" to product.timestamp
+            )
+            userRef.collection("scans").document(remoteId).set(scanData, SetOptions.merge()).await()
+        }
     }
 
     private fun sanitizeUsername(raw: String): String {

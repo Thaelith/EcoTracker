@@ -15,6 +15,8 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ScannedProductDaoTest {
+    private val userA = "user-a"
+    private val userB = "user-b"
 
     private lateinit var database: EcoTrackerDatabase
     private lateinit var dao: ScannedProductDao
@@ -43,7 +45,7 @@ class ScannedProductDaoTest {
                 updatedAt = 100L
             )
         )
-        dao.insertScanHistory(ScanHistoryEntity(barcode = "111", scannedAt = 100L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 100L))
 
         dao.upsertCachedProduct(
             cachedProduct(
@@ -53,7 +55,7 @@ class ScannedProductDaoTest {
                 updatedAt = 300L
             )
         )
-        dao.insertScanHistory(ScanHistoryEntity(barcode = "111", scannedAt = 300L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 300L))
 
         dao.upsertCachedProduct(
             cachedProduct(
@@ -63,9 +65,9 @@ class ScannedProductDaoTest {
                 updatedAt = 200L
             )
         )
-        dao.insertScanHistory(ScanHistoryEntity(barcode = "222", scannedAt = 200L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "222", scannedAt = 200L))
 
-        val products = dao.getAllProducts().first()
+        val products = dao.getAllProducts(userA).first()
 
         assertEquals(listOf(300L, 200L, 100L), products.map { it.timestamp })
         assertEquals(listOf("111", "222", "111"), products.map { it.barcode })
@@ -74,7 +76,7 @@ class ScannedProductDaoTest {
     }
 
     @Test
-    fun statisticsQueries_filterByTimeWindowAndCountRepeatedScans() = runBlocking {
+    fun statisticsQueries_filterByTimeWindowAndCountRepeatedScans_perUser() = runBlocking {
         dao.upsertCachedProduct(
             cachedProduct(
                 barcode = "111",
@@ -90,13 +92,14 @@ class ScannedProductDaoTest {
             )
         )
 
-        dao.insertScanHistory(ScanHistoryEntity(barcode = "222", scannedAt = 50L))
-        dao.insertScanHistory(ScanHistoryEntity(barcode = "111", scannedAt = 150L))
-        dao.insertScanHistory(ScanHistoryEntity(barcode = "111", scannedAt = 250L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "222", scannedAt = 50L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 150L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 250L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userB, barcode = "111", scannedAt = 350L))
 
-        val recentProducts = dao.getProductsSince(100L).first()
-        val recentCarbon = dao.getTotalCarbonSince(100L).first()
-        val totalCount = dao.getTotalScannedCount().first()
+        val recentProducts = dao.getProductsSince(userA, 100L).first()
+        val recentCarbon = dao.getTotalCarbonSince(userA, 100L).first()
+        val totalCount = dao.getTotalScannedCount(userA).first()
 
         assertEquals(listOf(250L, 150L), recentProducts.map { it.timestamp })
         assertEquals(listOf("111", "111"), recentProducts.map { it.barcode })
@@ -114,12 +117,12 @@ class ScannedProductDaoTest {
             )
         )
 
-        val firstId = dao.insertScanHistory(ScanHistoryEntity(barcode = "111", scannedAt = 100L))
-        val secondId = dao.insertScanHistory(ScanHistoryEntity(barcode = "111", scannedAt = 200L))
+        val firstId = dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 100L))
+        val secondId = dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 200L))
 
-        dao.deleteScanHistoryById(firstId)
+        dao.deleteScanHistoryById(userA, firstId)
 
-        val products = dao.getAllProducts().first()
+        val products = dao.getAllProducts(userA).first()
         val cachedProduct = dao.getCachedProductByBarcode("111")
 
         assertEquals(listOf(secondId), products.map { it.id })
@@ -137,17 +140,45 @@ class ScannedProductDaoTest {
                 carbonFootprint = 1.5
             )
         )
-        dao.insertScanHistory(ScanHistoryEntity(barcode = "111", scannedAt = 100L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 100L))
 
-        dao.deleteAllScanHistory()
+        dao.deleteAllScanHistory(userA)
 
-        assertEquals(emptyList<ScannedProduct>(), dao.getAllProducts().first())
-        assertEquals(0, dao.getTotalScannedCount().first())
+        assertEquals(emptyList<ScannedProduct>(), dao.getAllProducts(userA).first())
+        assertEquals(0, dao.getTotalScannedCount(userA).first())
         assertNotNull(dao.getCachedProductByBarcode("111"))
 
         dao.deleteAllCachedProducts()
 
         assertNull(dao.getCachedProductByBarcode("111"))
+    }
+
+    @Test
+    fun userScopedQueries_hideOtherUsersHistory() = runBlocking {
+        dao.upsertCachedProduct(cachedProduct(barcode = "111", productName = "Shared", carbonFootprint = 1.0))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userA, barcode = "111", scannedAt = 100L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userB, barcode = "111", scannedAt = 200L))
+
+        assertEquals(listOf(100L), dao.getAllProducts(userA).first().map { it.timestamp })
+        assertEquals(listOf(200L), dao.getAllProducts(userB).first().map { it.timestamp })
+        assertEquals(1, dao.getTotalScannedCount(userA).first())
+        assertEquals(1, dao.getTotalScannedCount(userB).first())
+    }
+
+    @Test
+    fun reassignScanHistoryUser_movesLegacyRowsWithoutAffectingOtherUsers() = runBlocking {
+        val legacyUser = EcoTrackerDatabase.LEGACY_USER_ID
+        dao.upsertCachedProduct(cachedProduct(barcode = "111", productName = "Legacy Product", carbonFootprint = 1.0))
+        dao.upsertCachedProduct(cachedProduct(barcode = "222", productName = "Current Product", carbonFootprint = 2.0))
+        dao.insertScanHistory(ScanHistoryEntity(userId = legacyUser, barcode = "111", scannedAt = 100L))
+        dao.insertScanHistory(ScanHistoryEntity(userId = userB, barcode = "222", scannedAt = 200L))
+
+        val moved = dao.reassignScanHistoryUser(legacyUser, userA)
+
+        assertEquals(1, moved)
+        assertEquals(listOf(100L), dao.getAllProducts(userA).first().map { it.timestamp })
+        assertEquals(emptyList<Long>(), dao.getAllProducts(legacyUser).first().map { it.timestamp })
+        assertEquals(listOf(200L), dao.getAllProducts(userB).first().map { it.timestamp })
     }
 
     private fun cachedProduct(

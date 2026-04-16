@@ -2,6 +2,7 @@ package com.ecotracker.ui.main
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -10,14 +11,20 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.navigation.ui.navigateUp
 import android.content.Intent
 import com.ecotracker.R
+import com.ecotracker.data.repository.EcoTrackerRepository
 import com.ecotracker.databinding.ActivityMainBinding
 import com.google.android.material.textview.MaterialTextView
 import com.ecotracker.ui.auth.AuthActivity
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var repository: EcoTrackerRepository
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
@@ -31,6 +38,9 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(true)
         bindDrawerHeader()
         setupNavigation()
+        lifecycleScope.launch {
+            repository.reconcileCurrentUserStats()
+        }
     }
 
     private fun bindDrawerHeader() {

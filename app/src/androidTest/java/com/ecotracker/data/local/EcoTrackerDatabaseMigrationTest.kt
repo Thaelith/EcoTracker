@@ -25,7 +25,7 @@ class EcoTrackerDatabaseMigrationTest {
     }
 
     @Test
-    fun migrationFrom4To5_preservesHistoryAndPromotesLatestProductPerBarcode() = runBlocking {
+    fun migrationFrom4To6_preservesHistoryAndPromotesLatestProductPerBarcode() = runBlocking {
         createVersion4Database().use { database: SQLiteDatabase ->
             database.execSQL(
                 """
@@ -42,13 +42,13 @@ class EcoTrackerDatabaseMigrationTest {
         }
 
         val migratedDb = Room.databaseBuilder(context, EcoTrackerDatabase::class.java, databaseName)
-            .addMigrations(EcoTrackerDatabase.MIGRATION_4_5)
+            .addMigrations(EcoTrackerDatabase.MIGRATION_4_5, EcoTrackerDatabase.MIGRATION_5_6)
             .allowMainThreadQueries()
             .build()
         try {
             val dao = migratedDb.scannedProductDao()
 
-            val allProducts = dao.getAllProducts().first()
+            val legacyProducts = dao.getAllProducts(EcoTrackerDatabase.LEGACY_USER_ID).first()
             val cached111 = dao.getCachedProductByBarcode("111")
             val cached222 = dao.getCachedProductByBarcode("222")
             val rawDb = SQLiteDatabase.openDatabase(
@@ -60,11 +60,11 @@ class EcoTrackerDatabaseMigrationTest {
             rawDb.use { database: SQLiteDatabase ->
                 assertEquals(
                     listOf(300L, 200L, 100L),
-                    allProducts.map { product -> product.timestamp }
+                    legacyProducts.map { product -> product.timestamp }
                 )
                 assertEquals(
                     listOf("Fresh Coffee", "Soap", "Fresh Coffee"),
-                    allProducts.map { product -> product.productName }
+                    legacyProducts.map { product -> product.productName }
                 )
                 assertEquals("Fresh Coffee", cached111?.productName)
                 assertEquals(300L, cached111?.updatedAt)
@@ -74,6 +74,11 @@ class EcoTrackerDatabaseMigrationTest {
                 assertTrue(tableExists(database, "scan_history"))
                 assertTrue(!tableExists(database, "scanned_products"))
                 assertTrue(hasIndex(database, "scan_history", "index_scan_history_barcode"))
+                assertTrue(hasIndex(database, "scan_history", "index_scan_history_userId_scannedAt"))
+                assertEquals(
+                    listOf(EcoTrackerDatabase.LEGACY_USER_ID, EcoTrackerDatabase.LEGACY_USER_ID, EcoTrackerDatabase.LEGACY_USER_ID),
+                    queryScanHistoryUserIds(database)
+                )
             }
         } finally {
             migratedDb.close()
@@ -128,5 +133,15 @@ class EcoTrackerDatabaseMigrationTest {
             }
         }
         return false
+    }
+
+    private fun queryScanHistoryUserIds(database: SQLiteDatabase): List<String> {
+        database.rawQuery("SELECT userId FROM scan_history ORDER BY id ASC", null).use { cursor ->
+            val values = mutableListOf<String>()
+            while (cursor.moveToNext()) {
+                values += cursor.getString(cursor.getColumnIndexOrThrow("userId"))
+            }
+            return values
+        }
     }
 }

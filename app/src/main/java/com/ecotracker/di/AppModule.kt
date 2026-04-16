@@ -93,7 +93,10 @@ object AppModule {
             context,
             EcoTrackerDatabase::class.java,
             EcoTrackerDatabase.DATABASE_NAME
-        ).addMigrations(EcoTrackerDatabase.MIGRATION_4_5).build()
+        ).addMigrations(
+            EcoTrackerDatabase.MIGRATION_4_5,
+            EcoTrackerDatabase.MIGRATION_5_6
+        ).build()
 
     @Provides
     @Singleton

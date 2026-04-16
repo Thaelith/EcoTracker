@@ -9,6 +9,7 @@ import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.remote.*
 import com.ecotracker.utils.Resource
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -24,6 +25,7 @@ class EcoTrackerRepositoryTest {
     private lateinit var upcApi: UPCItemDbApiService
     private lateinit var dao: ScannedProductDao
     private lateinit var auth: FirebaseAuth
+    private lateinit var firebaseUser: FirebaseUser
     private lateinit var firestore: FirebaseFirestore
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var repository: EcoTrackerRepository
@@ -37,6 +39,7 @@ class EcoTrackerRepositoryTest {
         upcApi = mockk()
         dao = mockk(relaxed = true)
         auth = mockk()
+        firebaseUser = mockk()
         firestore = mockk()
         sharedPreferences = mockk(relaxed = true)
 
@@ -157,6 +160,8 @@ class EcoTrackerRepositoryTest {
         )
         coEvery { dao.upsertCachedProduct(any()) } just Runs
         coEvery { dao.insertScanHistory(any()) } returns 1L
+        every { auth.currentUser } returns firebaseUser
+        every { firebaseUser.uid } returns "user-123"
 
         val id = repository.saveProduct(product, "${product.barcode}_${product.timestamp}")
 
@@ -183,6 +188,7 @@ class EcoTrackerRepositoryTest {
         coVerify(exactly = 1) {
             dao.insertScanHistory(
                 ScanHistoryEntity(
+                    userId = "user-123",
                     barcode = product.barcode,
                     scannedAt = product.timestamp
                 )
@@ -206,6 +212,8 @@ class EcoTrackerRepositoryTest {
         )
         coEvery { dao.upsertCachedProduct(any()) } just Runs
         coEvery { dao.insertScanHistory(any()) } returns 1L
+        every { auth.currentUser } returns firebaseUser
+        every { firebaseUser.uid } returns "user-123"
 
         // Using the convenience overload
         repository.saveProduct(product)
@@ -214,6 +222,7 @@ class EcoTrackerRepositoryTest {
         coVerify(exactly = 1) {
             dao.insertScanHistory(
                 ScanHistoryEntity(
+                    userId = "user-123",
                     barcode = product.barcode,
                     scannedAt = product.timestamp
                 )
@@ -244,21 +253,27 @@ class EcoTrackerRepositoryTest {
 
     @Test
     fun `deleteProductById deletes only scan history entry`() = runTest {
+        every { auth.currentUser } returns firebaseUser
+        every { firebaseUser.uid } returns "user-123"
+        coEvery { dao.getProductByHistoryId("user-123", 42L) } returns null
+
         repository.deleteProductById(42L)
 
-        coVerify(exactly = 1) { dao.deleteScanHistoryById(42L) }
+        coVerify(exactly = 1) { dao.deleteScanHistoryById("user-123", 42L) }
         coVerify(exactly = 0) { dao.deleteAllCachedProducts() }
     }
 
     @Test
     fun `deleteAllProducts clears scan history and cached products`() = runTest {
-        coEvery { dao.deleteAllScanHistory() } just Runs
+        every { auth.currentUser } returns firebaseUser
+        every { firebaseUser.uid } returns "user-123"
+        coEvery { dao.deleteAllScanHistory("user-123") } just Runs
         coEvery { dao.deleteAllCachedProducts() } just Runs
 
         repository.deleteAllProducts()
 
         coVerifyOrder {
-            dao.deleteAllScanHistory()
+            dao.deleteAllScanHistory("user-123")
             dao.deleteAllCachedProducts()
         }
     }

@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [CachedProductEntity::class, ScanHistoryEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(EcoTrackerConverters::class)
@@ -19,6 +19,7 @@ abstract class EcoTrackerDatabase : RoomDatabase() {
 
     companion object {
         const val DATABASE_NAME = "eco_tracker_db"
+        const val LEGACY_USER_ID = "__legacy_migrated__"
 
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -107,6 +108,23 @@ abstract class EcoTrackerDatabase : RoomDatabase() {
                     """.trimIndent()
                 )
                 db.execSQL("DROP TABLE scanned_products")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    ALTER TABLE scan_history
+                    ADD COLUMN userId TEXT NOT NULL DEFAULT '$LEGACY_USER_ID'
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_scan_history_userId_scannedAt
+                    ON scan_history(userId, scannedAt)
+                    """.trimIndent()
+                )
             }
         }
     }
