@@ -3,6 +3,7 @@ package com.ecotracker.data.repository
 import android.content.SharedPreferences
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.EcoTrackerDatabase
+import com.ecotracker.data.local.LocalUserStats
 import com.ecotracker.data.local.ScanHistoryEntity
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.local.ScannedProductDao
@@ -287,8 +288,8 @@ class EcoTrackerRepository @Inject constructor(
     }
 
     suspend fun saveProduct(product: ScannedProduct, remoteId: String): Long {
-        dao.upsertCachedProduct(product.toCachedProductEntity(updatedAt = product.timestamp))
-        val id = dao.insertScanHistory(
+        val id = dao.insertProductAndHistory(
+            product = product.toCachedProductEntity(updatedAt = product.timestamp),
             ScanHistoryEntity(
                 userId = currentUserKey(),
                 barcode = product.barcode,
@@ -348,6 +349,8 @@ class EcoTrackerRepository @Inject constructor(
 
     fun getProductsSince(startTime: Long): Flow<List<ScannedProduct>> =
         dao.getProductsSince(currentUserKey(), startTime)
+
+    fun getUserStats(): Flow<LocalUserStats> = dao.observeUserStats(currentUserKey())
 
     fun getTotalCarbonSince(startTime: Long): Flow<Double?> =
         dao.getTotalCarbonSince(currentUserKey(), startTime)
@@ -415,17 +418,16 @@ class EcoTrackerRepository @Inject constructor(
 
         return combine(
             remoteLeaderboard,
-            dao.getTotalScannedCount(currentUserId),
-            dao.getTotalCarbon(currentUserId)
-        ) { leaderboardResource, localScanCount, localCarbon ->
+            dao.observeUserStats(currentUserId)
+        ) { leaderboardResource, localStats ->
             when (leaderboardResource) {
                 is Resource.Success -> {
                     Resource.Success(
                         overlayCurrentUserLeaderboardStats(
                             users = leaderboardResource.data,
                             currentUserId = currentUserId,
-                            localScanCount = localScanCount,
-                            localCarbon = localCarbon ?: 0.0
+                            localScanCount = localStats.scanCount,
+                            localCarbon = localStats.totalCarbon
                         )
                     )
                 }
@@ -504,11 +506,10 @@ class EcoTrackerRepository @Inject constructor(
         userRef: com.google.firebase.firestore.DocumentReference,
         userId: String
     ) {
-        val scanCount = dao.getTotalScannedCountValue(userId)
-        val totalCarbon = dao.getTotalCarbonValue(userId) ?: 0.0
+        val localStats = dao.getUserStatsValue(userId)
         val stats = mutableMapOf<String, Any>(
-            "scanCount" to scanCount,
-            "co2e" to totalCarbon,
+            "scanCount" to localStats.scanCount,
+            "co2e" to localStats.totalCarbon,
             "updatedAt" to FieldValue.serverTimestamp()
         )
 

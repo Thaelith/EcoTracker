@@ -17,9 +17,6 @@ import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
 import dagger.hilt.android.AndroidEntryPoint
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
 @AndroidEntryPoint
 class StatisticsFragment : Fragment() {
@@ -100,8 +97,8 @@ class StatisticsFragment : Fragment() {
             binding.tvWeeklyCarbon.text = CarbonCalculator.format(carbon ?: 0.0)
         }
 
-        viewModel.weeklyProducts.observe(viewLifecycleOwner) { products ->
-            if (products.isEmpty()) {
+        viewModel.weeklyChart.observe(viewLifecycleOwner) { bars ->
+            if (bars.all { it.totalCarbonKg == 0f }) {
                 binding.barChart.clear()
                 binding.chartEmptyState.visibility = View.VISIBLE
                 return@observe
@@ -109,31 +106,10 @@ class StatisticsFragment : Fragment() {
 
             binding.chartEmptyState.visibility = View.GONE
 
-            val cal = Calendar.getInstance()
-            val groupedByDay = products.groupBy {
-                cal.timeInMillis = it.timestamp
-                cal.get(Calendar.DAY_OF_YEAR)
+            val entries = bars.mapIndexed { index, bar ->
+                BarEntry(index.toFloat(), bar.totalCarbonKg)
             }
-
-            val format = SimpleDateFormat("EEE", Locale.getDefault())
-            val entries = mutableListOf<BarEntry>()
-            val labels = mutableListOf<String>()
-
-            val iterCal = Calendar.getInstance()
-            iterCal.add(Calendar.DAY_OF_YEAR, -6)
-
-            for (i in 0..6) {
-                val dayOfYear = iterCal.get(Calendar.DAY_OF_YEAR)
-                val dayList = groupedByDay[dayOfYear] ?: emptyList()
-                val sumCarbon = dayList
-                    .filter { it.carbonFootprint != null }
-                    .sumOf { it.carbonFootprint!! }
-                    .toFloat()
-
-                entries.add(BarEntry(i.toFloat(), sumCarbon))
-                labels.add(format.format(iterCal.time))
-                iterCal.add(Calendar.DAY_OF_YEAR, 1)
-            }
+            val labels = bars.map { it.label }
 
             val dataSet = BarDataSet(entries, getString(R.string.chart_title)).apply {
                 colors = entries.map { entry ->
@@ -153,7 +129,6 @@ class StatisticsFragment : Fragment() {
                 data = BarData(dataSet).apply {
                     barWidth = 0.56f
                 }
-                animateY(300)
                 invalidate()
             }
         }
@@ -173,6 +148,7 @@ class StatisticsFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        binding.barChart.clear()
         super.onDestroyView()
         _binding = null
     }

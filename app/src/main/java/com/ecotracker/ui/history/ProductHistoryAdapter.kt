@@ -20,11 +20,21 @@ class ProductHistoryAdapter(
     private val onCompareClick: (ScannedProduct) -> Unit
 ) : ListAdapter<ScannedProduct, ProductHistoryAdapter.ViewHolder>(DiffCallback) {
 
-    private var selectedBarcodes: Set<String> = emptySet()
+    private var selectedProductIds: Set<Long> = emptySet()
 
     fun updateSelection(selected: List<ScannedProduct>) {
-        selectedBarcodes = selected.map { it.barcode }.toSet()
-        notifyDataSetChanged()
+        val updatedSelection = selected.map { it.id }.toSet()
+        if (selectedProductIds == updatedSelection) {
+            return
+        }
+
+        val changedIds = selectedProductIds + updatedSelection
+        selectedProductIds = updatedSelection
+        currentList.forEachIndexed { index, product ->
+            if (product.id in changedIds) {
+                notifyItemChanged(index)
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -48,7 +58,7 @@ class ProductHistoryAdapter(
         fun bind(product: ScannedProduct) {
             binding.apply {
                 val context = root.context
-                val isSelected = selectedBarcodes.contains(product.barcode)
+                val isSelected = selectedProductIds.contains(product.id)
                 tvName.text = product.productName
                 tvBrand.text = product.brand
                 tvEcoScore.text = product.ecoScore

@@ -158,8 +158,7 @@ class EcoTrackerRepositoryTest {
             carbonFootprint = 2.0,
             status = EstimationStatus.VERIFIED
         )
-        coEvery { dao.upsertCachedProduct(any()) } just Runs
-        coEvery { dao.insertScanHistory(any()) } returns 1L
+        coEvery { dao.insertProductAndHistory(any(), any()) } returns 1L
         every { auth.currentUser } returns firebaseUser
         every { firebaseUser.uid } returns "user-123"
 
@@ -167,7 +166,7 @@ class EcoTrackerRepositoryTest {
 
         assertEquals(1L, id)
         coVerify(exactly = 1) {
-            dao.upsertCachedProduct(
+            dao.insertProductAndHistory(
                 CachedProductEntity(
                     barcode = product.barcode,
                     productName = product.productName,
@@ -182,11 +181,7 @@ class EcoTrackerRepositoryTest {
                     aiConfidence = product.aiConfidence,
                     aiDataQuality = product.aiDataQuality,
                     updatedAt = product.timestamp
-                )
-            )
-        }
-        coVerify(exactly = 1) {
-            dao.insertScanHistory(
+                ),
                 ScanHistoryEntity(
                     userId = "user-123",
                     barcode = product.barcode,
@@ -210,17 +205,16 @@ class EcoTrackerRepositoryTest {
             status = EstimationStatus.VERIFIED,
             timestamp = 1000L
         )
-        coEvery { dao.upsertCachedProduct(any()) } just Runs
-        coEvery { dao.insertScanHistory(any()) } returns 1L
+        coEvery { dao.insertProductAndHistory(any(), any()) } returns 1L
         every { auth.currentUser } returns firebaseUser
         every { firebaseUser.uid } returns "user-123"
 
         // Using the convenience overload
         repository.saveProduct(product)
 
-        coVerify(exactly = 1) { dao.upsertCachedProduct(any()) }
         coVerify(exactly = 1) {
-            dao.insertScanHistory(
+            dao.insertProductAndHistory(
+                any(),
                 ScanHistoryEntity(
                     userId = "user-123",
                     barcode = product.barcode,

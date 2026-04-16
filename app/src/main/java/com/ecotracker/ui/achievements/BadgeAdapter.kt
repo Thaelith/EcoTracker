@@ -2,15 +2,15 @@ package com.ecotracker.ui.achievements
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.ecotracker.R
 import com.ecotracker.databinding.ItemBadgeBinding
 import com.ecotracker.utils.Badge
 
 class BadgeAdapter :
-    RecyclerView.Adapter<BadgeAdapter.ViewHolder>() {
-
-    private val badges = mutableListOf<Badge>()
+    ListAdapter<Badge, BadgeAdapter.ViewHolder>(DiffCallback) {
 
     class ViewHolder(private val binding: ItemBadgeBinding) :
         RecyclerView.ViewHolder(binding.root) {
@@ -45,14 +45,20 @@ class BadgeAdapter :
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(badges[position])
+        holder.bind(getItem(position))
     }
 
-    override fun getItemCount(): Int = badges.size
-
     fun submitBadges(items: List<Badge>) {
-        badges.clear()
-        badges.addAll(items)
-        notifyDataSetChanged()
+        submitList(items)
+    }
+
+    companion object {
+        private val DiffCallback = object : DiffUtil.ItemCallback<Badge>() {
+            override fun areItemsTheSame(oldItem: Badge, newItem: Badge): Boolean =
+                oldItem.id == newItem.id
+
+            override fun areContentsTheSame(oldItem: Badge, newItem: Badge): Boolean =
+                oldItem == newItem
+        }
     }
 }

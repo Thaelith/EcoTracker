@@ -15,16 +15,14 @@ class ComparisonViewModel @Inject constructor() : ViewModel() {
 
     fun toggleProductSelection(product: ScannedProduct) {
         val current = _selectedProducts.value.orEmpty().toMutableList()
-        val existing = current.find { it.barcode == product.barcode }
-        
+        val existing = current.find { it.id == product.id }
+
         if (existing != null) {
             current.remove(existing)
         } else {
             if (current.size < 2) {
                 current.add(product)
             } else {
-                // Replace the last one or do nothing? 
-                // Let's replace the second one to keep it simple.
                 current[1] = product
             }
         }

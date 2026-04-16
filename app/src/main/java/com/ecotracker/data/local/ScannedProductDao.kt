@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -14,6 +15,15 @@ interface ScannedProductDao {
 
     @Insert
     suspend fun insertScanHistory(scanHistory: ScanHistoryEntity): Long
+
+    @Transaction
+    suspend fun insertProductAndHistory(
+        product: CachedProductEntity,
+        scanHistory: ScanHistoryEntity
+    ): Long {
+        upsertCachedProduct(product)
+        return insertScanHistory(scanHistory)
+    }
 
     @Query("DELETE FROM scan_history WHERE userId = :userId AND id = :id")
     suspend fun deleteScanHistoryById(userId: String, id: Long)
@@ -93,6 +103,28 @@ interface ScannedProductDao {
     )
     fun getTotalCarbon(userId: String): Flow<Double?>
 
+    @Query(
+        """
+        SELECT
+            COUNT(sh.id) AS scanCount,
+            COALESCE(SUM(COALESCE(cp.carbonFootprint, 0)), 0) AS totalCarbon,
+            COALESCE(MAX(CASE WHEN cp.status = 'VERIFIED' THEN 1 ELSE 0 END), 0) AS hasVerified,
+            COALESCE(
+                MAX(
+                    CASE
+                        WHEN cp.carbonFootprint IS NOT NULL AND cp.carbonFootprint < 1.0 THEN 1
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS hasLowCarbon
+        FROM scan_history sh
+        LEFT JOIN cached_products cp ON cp.barcode = sh.barcode
+        WHERE sh.userId = :userId
+        """
+    )
+    fun observeUserStats(userId: String): Flow<LocalUserStats>
+
     @Query("SELECT COUNT(*) FROM scan_history WHERE userId = :userId")
     suspend fun getTotalScannedCountValue(userId: String): Int
 
@@ -108,6 +140,28 @@ interface ScannedProductDao {
         """
     )
     suspend fun getTotalCarbonValue(userId: String): Double?
+
+    @Query(
+        """
+        SELECT
+            COUNT(sh.id) AS scanCount,
+            COALESCE(SUM(COALESCE(cp.carbonFootprint, 0)), 0) AS totalCarbon,
+            COALESCE(MAX(CASE WHEN cp.status = 'VERIFIED' THEN 1 ELSE 0 END), 0) AS hasVerified,
+            COALESCE(
+                MAX(
+                    CASE
+                        WHEN cp.carbonFootprint IS NOT NULL AND cp.carbonFootprint < 1.0 THEN 1
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS hasLowCarbon
+        FROM scan_history sh
+        LEFT JOIN cached_products cp ON cp.barcode = sh.barcode
+        WHERE sh.userId = :userId
+        """
+    )
+    suspend fun getUserStatsValue(userId: String): LocalUserStats
 
     @Query(
         """

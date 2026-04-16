@@ -60,12 +60,16 @@ class ProfileViewModel @Inject constructor(
 
     private fun observeGamification() {
         viewModelScope.launch {
-            repository.getAllProducts()
-                .catch { emit(emptyList()) }
-                .collect { products ->
-                    val scanCount = products.size
+            repository.getUserStats()
+                .catch { emit(com.ecotracker.data.local.LocalUserStats(0, 0.0, 0, 0)) }
+                .collect { stats ->
+                    val scanCount = stats.scanCount
                     val rank = GamificationEngine.calculateRank(scanCount)
-                    val badges = GamificationEngine.getBadges(products)
+                    val badges = GamificationEngine.getBadges(
+                        scanCount = scanCount,
+                        hasVerifiedProduct = stats.verifiedBadgeUnlocked,
+                        hasLowCarbonProduct = stats.lowCarbonBadgeUnlocked
+                    )
 
                     _uiState.update { current ->
                         current.copy(

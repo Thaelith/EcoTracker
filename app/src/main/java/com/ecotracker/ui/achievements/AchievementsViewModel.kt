@@ -22,10 +22,14 @@ class AchievementsViewModel @Inject constructor(
     repository: EcoTrackerRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<AchievementsUiState> = repository.getAllProducts()
-        .map { products ->
+    val uiState: StateFlow<AchievementsUiState> = repository.getUserStats()
+        .map { stats ->
             AchievementsUiState(
-                badges = GamificationEngine.getBadges(products)
+                badges = GamificationEngine.getBadges(
+                    scanCount = stats.scanCount,
+                    hasVerifiedProduct = stats.verifiedBadgeUnlocked,
+                    hasLowCarbonProduct = stats.lowCarbonBadgeUnlocked
+                )
             )
         }
         .catch { emit(AchievementsUiState()) }

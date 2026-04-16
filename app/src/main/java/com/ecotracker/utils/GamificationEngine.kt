@@ -33,8 +33,20 @@ object GamificationEngine {
     }
 
     fun getBadges(products: List<ScannedProduct>): List<Badge> {
-        val scanCount = products.size
-        
+        return getBadges(
+            scanCount = products.size,
+            hasVerifiedProduct = products.any { it.status == EstimationStatus.VERIFIED },
+            hasLowCarbonProduct = products.any {
+                it.carbonFootprint != null && it.carbonFootprint < 1.0
+            }
+        )
+    }
+
+    fun getBadges(
+        scanCount: Int,
+        hasVerifiedProduct: Boolean,
+        hasLowCarbonProduct: Boolean
+    ): List<Badge> {
         return listOf(
             Badge(
                 "first_seed",
@@ -52,13 +64,13 @@ object GamificationEngine {
                 "verified_scout",
                 R.string.badge_verified_scout_name,
                 R.string.badge_verified_scout_desc,
-                products.any { it.status == EstimationStatus.VERIFIED }
+                hasVerifiedProduct
             ),
             Badge(
                 "carbon_hero",
                 R.string.badge_carbon_hero_name,
                 R.string.badge_carbon_hero_desc,
-                products.any { it.carbonFootprint != null && it.carbonFootprint < 1.0 }
+                hasLowCarbonProduct
             )
         )
     }
