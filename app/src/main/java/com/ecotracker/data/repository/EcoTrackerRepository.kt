@@ -24,8 +24,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -314,7 +316,7 @@ class EcoTrackerRepository @Inject constructor(
                     "timestamp" to product.timestamp
                 )
                 scanRef.set(scanData, SetOptions.merge()).await()
-                syncRemoteStatsFromUserScans(userRef)
+                syncCurrentUserStatsFromLocal(userRef, firebaseUser.uid)
             } catch (e: Exception) {
                 Logger.error(TAG, "Firestore sync failed during save", e)
             }
@@ -398,14 +400,41 @@ class EcoTrackerRepository @Inject constructor(
         val currentUser = auth.currentUser ?: return
         try {
             adoptLegacyHistoryIfNeeded(currentUser.uid)
-            syncRemoteStatsFromUserScans(firestore.collection("users").document(currentUser.uid))
+            syncCurrentUserStatsFromLocal(
+                userRef = firestore.collection("users").document(currentUser.uid),
+                userId = currentUser.uid
+            )
         } catch (e: Exception) {
             Logger.error(TAG, "Failed to reconcile current user stats", e)
         }
     }
 
     fun getLeaderboardUsers(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> {
-        return observeRemoteLeaderboard()
+        val remoteLeaderboard = observeRemoteLeaderboard()
+        val currentUserId = auth.currentUser?.uid ?: return remoteLeaderboard
+
+        return combine(
+            remoteLeaderboard,
+            dao.getTotalScannedCount(currentUserId),
+            dao.getTotalCarbon(currentUserId)
+        ) { leaderboardResource, localScanCount, localCarbon ->
+            when (leaderboardResource) {
+                is Resource.Success -> {
+                    Resource.Success(
+                        overlayCurrentUserLeaderboardStats(
+                            users = leaderboardResource.data,
+                            currentUserId = currentUserId,
+                            localScanCount = localScanCount,
+                            localCarbon = localCarbon ?: 0.0
+                        )
+                    )
+                }
+
+                is Resource.Error -> leaderboardResource
+                is Resource.Loading -> leaderboardResource
+                is Resource.NeedsInput -> leaderboardResource
+            }
+        }
     }
 
     private fun observeRemoteLeaderboard(): Flow<Resource<List<com.ecotracker.data.model.LeaderboardUser>>> =
@@ -445,12 +474,38 @@ class EcoTrackerRepository @Inject constructor(
             awaitClose { listener.remove() }
         }
 
-    private suspend fun syncRemoteStatsFromUserScans(userRef: com.google.firebase.firestore.DocumentReference) {
-        val scanSnapshots = userRef.collection("scans").get().await()
-        val scanCount = scanSnapshots.size()
-        val totalCarbon = scanSnapshots.documents.sumOf { document ->
-            document.getDouble("carbonFootprint") ?: 0.0
+    private fun overlayCurrentUserLeaderboardStats(
+        users: List<com.ecotracker.data.model.LeaderboardUser>,
+        currentUserId: String,
+        localScanCount: Int,
+        localCarbon: Double
+    ): List<com.ecotracker.data.model.LeaderboardUser> {
+        val adjustedUsers = users.map { user ->
+            if (user.uid == currentUserId) {
+                user.copy(
+                    scanCount = localScanCount,
+                    co2e = localCarbon
+                )
+            } else {
+                user
+            }
         }
+
+        return adjustedUsers
+            .sortedWith(
+                compareByDescending<com.ecotracker.data.model.LeaderboardUser> { it.scanCount }
+                    .thenByDescending { it.co2e }
+                    .thenBy { it.username.lowercase() }
+            )
+            .mapIndexed { index, user -> user.copy(rank = index + 1) }
+    }
+
+    private suspend fun syncCurrentUserStatsFromLocal(
+        userRef: com.google.firebase.firestore.DocumentReference,
+        userId: String
+    ) {
+        val scanCount = dao.getTotalScannedCountValue(userId)
+        val totalCarbon = dao.getTotalCarbonValue(userId) ?: 0.0
         val stats = mutableMapOf<String, Any>(
             "scanCount" to scanCount,
             "co2e" to totalCarbon,
@@ -477,7 +532,7 @@ class EcoTrackerRepository @Inject constructor(
             val userRef = firestore.collection("users").document(firebaseUser.uid)
             val remoteId = "${product.barcode}_${product.timestamp}"
             userRef.collection("scans").document(remoteId).delete().await()
-            syncRemoteStatsFromUserScans(userRef)
+            syncCurrentUserStatsFromLocal(userRef, firebaseUser.uid)
         } catch (e: Exception) {
             Logger.error(TAG, "Firestore sync failed during delete", e)
         }
