@@ -20,18 +20,12 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Read API key from local.properties if it exists
-        Properties properties = new Properties()
-        if (project.rootProject.file('local.properties').exists()) {
-            properties.load(project.rootProject.file('local.properties').newDataInputStream())
-        }
-        buildConfigField "String", "GEMINI_API_KEY", "\"${properties.getProperty('GEMINI_API_KEY', '')}\""
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -107,7 +101,5 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.7.2')
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-firestore'
-    
-    // Gemini AI
-    implementation 'com.google.ai.client.generativeai:generativeai:0.9.0'
+    implementation 'com.google.firebase:firebase-functions'
 }

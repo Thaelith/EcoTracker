@@ -12,6 +12,7 @@ import com.ecotracker.data.remote.UPCItemDbApiService
 import com.ecotracker.utils.AppConfig
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -110,6 +111,11 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFunctions(): FirebaseFunctions =
+        com.google.firebase.functions.FirebaseFunctions.getInstance()
 
     @Provides
     @Singleton

@@ -6,14 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.data.local.EstimationStatus
-import com.ecotracker.data.repository.EcoTrackerRepository
+import com.ecotracker.data.repository.ProductRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ManualEntryViewModel @Inject constructor(
-    private val repository: EcoTrackerRepository
+    private val repository: ProductRepository
 ) : ViewModel() {
 
     private val _saveState = MutableLiveData<Boolean>()

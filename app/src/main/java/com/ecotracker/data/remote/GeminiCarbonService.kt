@@ -1,12 +1,14 @@
 package com.ecotracker.data.remote
 
-import com.ecotracker.BuildConfig
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.ScannedProduct
 import com.ecotracker.utils.Logger
-import com.google.ai.client.generativeai.GenerativeModel
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Structured analysis result from Gemini.
@@ -19,150 +21,120 @@ data class GeminiAnalysis(
     val dataQuality: String
 )
 
-object GeminiCarbonService {
+@Singleton
+class GeminiCarbonService @Inject constructor(
+    private val functions: FirebaseFunctions
+) {
 
-    private val apiKey = BuildConfig.GEMINI_API_KEY
-
-    private val generativeModel by lazy {
-        GenerativeModel(
-            modelName = "gemini-2.5-flash",
-            apiKey = apiKey
-        )
+    companion object {
+        private const val TAG = "GeminiService"
+        private const val PROXY_FN_ESTIMATE = "estimateCarbonFootprint"
+        private const val PROXY_FN_IDENTIFY = "identifyProduct"
     }
-
-    private const val TAG = "GeminiService"
 
     /**
      * Prompts the LLM to estimate a carbon footprint with full metadata.
+     * Uses the proxy for all requests to ensure the API key remains secure on the server.
      */
-    suspend fun estimateCarbonFootprint(productTitle: String, category: String?, quantity: String? = null): GeminiAnalysis? {
-        Logger.debug(TAG, "Estimating footprint for '$productTitle'")
+    suspend fun estimateCarbonFootprint(
+        productTitle: String,
+        category: String?,
+        quantity: String? = null
+    ): GeminiAnalysis? {
+        Logger.debug(TAG, "Estimating footprint for '$productTitle' (proxy=true)")
 
-        if (apiKey.isBlank()) {
-            Logger.error(TAG, "Gemini API key is not configured")
-            return null
-        }
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val catStr = if (!category.isNullOrBlank()) "It belongs to the category: $category." else ""
-                val qtyStr = if (!quantity.isNullOrBlank()) "The product size/quantity is: $quantity." else ""
-                val prompt = """
-                    You are a strict environmental data scientist. Analyze this product: "$productTitle".
-                    $catStr
-                    $qtyStr
-                    Estimate the lifecycle carbon footprint in kg CO2e for this EXACT product size.
-                    Return ONLY a JSON object with this exact structure:
-                    {
-                      "estimated_category": "string",
-                      "kg_co2e": double,
-                      "reasoning": "A concise 2-3 sentence explanation of the primary carbon drivers (materials, production, and transport).",
-                      "confidence": "High/Medium/Low",
-                      "data_quality_flag": "Carbon Expert Estimate"
-                    }
-                  Do not include markdown formatting or any text outside the JSON.
-                """.trimIndent()
-
-                Logger.debug(TAG, "Fetching estimation...")
-                val response = generativeModel.generateContent(prompt)
-                val text = response.text?.replace("```json", "")?.replace("```", "")?.trim()
-
-                if (text.isNullOrBlank()) return@withContext null
-
-                val json = com.google.gson.JsonParser.parseString(text).asJsonObject
-
-                fun getString(key: String, default: String) = json.get(key)?.let {
-                    if (it.isJsonPrimitive) it.asString else default
-                } ?: default
-
-                fun getDouble(key: String): Double? = json.get(key)?.let {
-                    if (it.isJsonPrimitive && (it.asJsonPrimitive.isNumber || it.asJsonPrimitive.isString)) {
-                        try { it.asDouble } catch (e: Exception) { null }
-                    } else null
-                }
-
-                GeminiAnalysis(
-                    estimatedCategory = getString("estimated_category", "Unknown"),
-                    kgCo2e = getDouble("kg_co2e"),
-                    reasoning = getString("reasoning", "No reasoning provided"),
-                    confidence = getString("confidence", "Unknown"),
-                    dataQuality = getString("data_quality_flag", "Expert Estimate")
-                ).also {
-                    Logger.debug(TAG, "Analysis complete: category=${it.estimatedCategory}, co2e=${it.kgCo2e}")
-                }
-            } catch (e: Exception) {
-                Logger.error(TAG, "Estimation failed: ${e.javaClass.simpleName}", e)
-                null
-            }
-        }
+        return estimateViaProxy(productTitle, category, quantity)
     }
 
     /**
      * Prompts the LLM to identify a product using its barcode and a helpful hint from the user.
+     * Uses the proxy for all requests to ensure the API key remains secure on the server.
      */
     suspend fun identifyProductWithUserHint(barcode: String, userHint: String): ScannedProduct? {
         val masked = Logger.maskBarcode(barcode)
-        Logger.debug(TAG, "Identifying $masked with user description")
+        Logger.debug(TAG, "Identifying $masked with user description (proxy=true)")
 
-        if (apiKey.isBlank()) return null
+        return identifyViaProxy(barcode, userHint)
+    }
 
-        return withContext(Dispatchers.IO) {
+    // ── Proxy Methods ─────────────────────────────────────────────────────────
+
+    private suspend fun estimateViaProxy(
+        productTitle: String,
+        category: String?,
+        quantity: String?
+    ): GeminiAnalysis? = withContext(Dispatchers.IO) {
+        try {
+            val data = hashMapOf(
+                "productTitle" to productTitle,
+                "category" to (category ?: ""),
+                "quantity" to (quantity ?: "")
+            )
+
+            val result = functions
+                .getHttpsCallable(PROXY_FN_ESTIMATE)
+                .call(data)
+                .await()
+                .data as? Map<*, *>
+
+            if (result == null) {
+                Logger.error(TAG, "Proxy returned null result")
+                return@withContext null
+            }
+
+            GeminiAnalysis(
+                estimatedCategory = result["estimatedCategory"] as? String ?: "Unknown",
+                kgCo2e = (result["kgCo2e"] as? Number)?.toDouble(),
+                reasoning = result["reasoning"] as? String ?: "No reasoning provided",
+                confidence = result["confidence"] as? String ?: "Unknown",
+                dataQuality = result["dataQuality"] as? String ?: "Expert Estimate"
+            ).also {
+                Logger.debug(TAG, "Proxy analysis complete: category=${it.estimatedCategory}, co2e=${it.kgCo2e}")
+            }
+        } catch (e: Exception) {
+            Logger.error(TAG, "Proxy estimation failed: ${e.javaClass.simpleName}", e)
+            null
+        }
+    }
+
+    private suspend fun identifyViaProxy(barcode: String, userHint: String): ScannedProduct? =
+        withContext(Dispatchers.IO) {
             try {
-                val prompt = """
-                    You are a universal product database. The user scanned the barcode "$barcode" but we couldn't find it.
-                    The user has provided a helpful description of the product: "$userHint".
-                    Using the barcode number and the user's description, identify the exact product.
-                    Estimate its lifecycle carbon footprint in kg CO2e.
-                    Return ONLY a JSON object with this exact structure:
-                    {
-                      "product_name": "string",
-                      "estimated_category": "string",
-                      "kg_co2e": double,
-                      "reasoning": "A concise 2-3 sentence explanation of why the user's description helped identify this specific product and its primary carbon impact.",
-                      "confidence": "Medium",
-                      "data_quality_flag": "User-Assisted Estimate"
-                    }
-                  Do not include markdown formatting or any text outside the JSON.
-                """.trimIndent()
+                val data = hashMapOf(
+                    "barcode" to barcode,
+                    "userHint" to userHint
+                )
 
-                Logger.debug(TAG, "Querying for barcode identification...")
-                val response = generativeModel.generateContent(prompt)
-                val text = response.text?.replace("```json", "")?.replace("```", "")?.trim()
+                val result = functions
+                    .getHttpsCallable(PROXY_FN_IDENTIFY)
+                    .call(data)
+                    .await()
+                    .data as? Map<*, *>
 
-                if (text.isNullOrBlank()) return@withContext null
-
-                val json = com.google.gson.JsonParser.parseString(text).asJsonObject
-
-                fun getString(key: String, default: String) = json.get(key)?.let {
-                    if (it.isJsonPrimitive) it.asString else default
-                } ?: default
-
-                fun getDouble(key: String): Double? = json.get(key)?.let {
-                    if (it.isJsonPrimitive && (it.asJsonPrimitive.isNumber || it.asJsonPrimitive.isString)) {
-                        try { it.asDouble } catch (e: Exception) { null }
-                    } else null
+                if (result == null) {
+                    Logger.error(TAG, "Proxy returned null result")
+                    return@withContext null
                 }
 
                 ScannedProduct(
                     barcode = barcode,
-                    productName = getString("product_name", "Unknown Product"),
+                    productName = result["productName"] as? String ?: "Unknown Product",
                     brand = "",
-                    categories = getString("estimated_category", "Unknown"),
+                    categories = result["estimatedCategory"] as? String ?: "Unknown",
                     imageUrl = "",
                     ecoScore = "not-applicable",
                     ecoScoreValue = -1,
-                    carbonFootprint = getDouble("kg_co2e"),
+                    carbonFootprint = (result["kgCo2e"] as? Number)?.toDouble(),
                     status = EstimationStatus.AI_ESTIMATED,
-                    aiReasoning = getString("reasoning", "No reasoning provided"),
-                    aiConfidence = getString("confidence", "Medium"),
-                    aiDataQuality = getString("data_quality_flag", "User-Assisted Estimate")
+                    aiReasoning = result["reasoning"] as? String ?: "No reasoning provided",
+                    aiConfidence = result["confidence"] as? String ?: "Medium",
+                    aiDataQuality = result["dataQuality"] as? String ?: "User-Assisted Estimate"
                 ).also {
-                    Logger.debug(TAG, "Identification successful: ${it.productName}")
+                    Logger.debug(TAG, "Proxy identification successful: ${it.productName}")
                 }
             } catch (e: Exception) {
-                Logger.error(TAG, "Identification failed: ${e.javaClass.simpleName}", e)
+                Logger.error(TAG, "Proxy identification failed: ${e.javaClass.simpleName}", e)
                 null
             }
         }
-    }
 }

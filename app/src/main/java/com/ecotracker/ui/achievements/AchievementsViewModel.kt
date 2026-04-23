@@ -2,7 +2,7 @@ package com.ecotracker.ui.achievements
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ecotracker.data.repository.EcoTrackerRepository
+import com.ecotracker.data.repository.UserRepository
 import com.ecotracker.utils.Badge
 import com.ecotracker.utils.GamificationEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,7 +19,7 @@ data class AchievementsUiState(
 
 @HiltViewModel
 class AchievementsViewModel @Inject constructor(
-    repository: EcoTrackerRepository
+    repository: UserRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<AchievementsUiState> = repository.getUserStats()

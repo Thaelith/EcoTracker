@@ -179,13 +179,12 @@ Use `local.properties.example` as a reference for local setup.
 Required local items:
 
 - Android SDK path
-- `GEMINI_API_KEY` only if you want AI-assisted estimation enabled
+- Firebase Functions proxy setup for AI estimation
 
 Example:
 
 ```properties
 sdk.dir=C\:\\Users\\<you>\\AppData\\Local\\Android\\Sdk
-GEMINI_API_KEY=your_key_here
 ```
 
 ### 3. Add Firebase configuration

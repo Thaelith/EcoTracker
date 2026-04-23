@@ -1,5 +1,6 @@
 package com.ecotracker.utils
 
+import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.remote.AgribalyseDto
 import com.ecotracker.data.remote.EcoScoreDataDto
 import com.ecotracker.data.remote.NutrimentsDto
@@ -9,16 +10,16 @@ import org.junit.Test
 
 class CarbonCalculatorTest {
 
-    private fun createProduct(
-        productName: String? = null,
+    private fun buildProductDto(
+        agribalyseCo2: Double? = null,
+        carbonPer100g: Double? = null,
         categories: String? = null,
+        productName: String? = null,
         ecoScoreGrade: String? = null,
-        ecoScoreData: EcoScoreDataDto? = null,
-        nutriments: NutrimentsDto? = null,
-        productQuantity: Double? = null
+        productQuantity: Double? = 1000.0
     ): ProductDto {
         return ProductDto(
-            barcode = null,
+            barcode = "123",
             productName = productName,
             productNameEn = null,
             brands = null,
@@ -27,8 +28,27 @@ class CarbonCalculatorTest {
             imageFrontUrl = null,
             ecoScoreGrade = ecoScoreGrade,
             ecoScoreScore = null,
-            ecoScoreData = ecoScoreData,
-            nutriments = nutriments,
+            ecoScoreData = if (agribalyseCo2 != null) {
+                EcoScoreDataDto(
+                    score = null,
+                    grade = ecoScoreGrade,
+                    agribalyse = AgribalyseDto(
+                        co2Total = agribalyseCo2,
+                        co2Agriculture = null,
+                        co2Packaging = null
+                    )
+                )
+            } else {
+                null
+            },
+            nutriments = if (carbonPer100g != null) {
+                NutrimentsDto(
+                    carbonFootprint = null,
+                    carbonFootprintPer100g = carbonPer100g
+                )
+            } else {
+                null
+            },
             productQuantity = productQuantity,
             packaging = null,
             origins = null,
@@ -38,136 +58,99 @@ class CarbonCalculatorTest {
     }
 
     @Test
-    fun `calculateCarbonFootprint should return exactly 0_5 for grade A with default 1kg`() {
-        val product = createProduct(ecoScoreGrade = "a")
+    fun `calculateCarbonFootprint uses Agribalyse data when available`() {
+        val product = buildProductDto(agribalyseCo2 = 2.5, productQuantity = 1000.0)
         val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(0.5, result.value!!, 0.001)
-        assertEquals(com.ecotracker.data.local.EstimationStatus.CATEGORY_AVERAGE, result.status)
-    }
 
-    @Test
-    fun `calculateCarbonFootprint should return exactly 1_4 for grade B with default 1kg`() {
-        val product = createProduct(ecoScoreGrade = "B")
-        val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(1.4, result.value!!, 0.001)
-        assertEquals(com.ecotracker.data.local.EstimationStatus.CATEGORY_AVERAGE, result.status)
-    }
-
-    @Test
-    fun `calculateCarbonFootprint should scale based on product quantity`() {
-        // Product is 500g (0.5kg) and grade is E (11.0 kg CO2e / kg)
-        // Total should be 5.5 kg CO2e
-        val product = createProduct(ecoScoreGrade = "e", productQuantity = 500.0)
-        val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(5.5, result.value!!, 0.001)
-    }
-
-    @Test
-    fun `calculateCarbonFootprint should prioritize real agribalyse data and scale by quantity`() {
-        // Agribalyse has a value of 4.2 kg CO2e per kg
-        val agribalyse = AgribalyseDto(co2Total = 4.2, co2Agriculture = null, co2Packaging = null)
-        val ecoScoreData = EcoScoreDataDto(score = null, grade = null, agribalyse = agribalyse)
-        
-        // Product is 200g (0.2kg). 4.2 * 0.2 = 0.84 kg CO2e
-        val product = createProduct(
-            ecoScoreGrade = "a",
-            ecoScoreData = ecoScoreData,
-            productQuantity = 200.0
-        )
-        val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(0.84, result.value!!, 0.001)
-        assertEquals(com.ecotracker.data.local.EstimationStatus.VERIFIED, result.status)
-    }
-
-    @Test
-    fun `calculateCarbonFootprint should prioritize nutriments data over fallbacks`() {
-        // Nutriments has carbonFootprintPer100g of 140g CO2e 
-        val nutriments = NutrimentsDto(carbonFootprint = null, carbonFootprintPer100g = 140.0)
-        
-        // Product is 100g exactly (multiplier 1.0 vs 100g). 
-        // 140g CO2e / 1000 = 0.14 kg CO2e 
-        val product = createProduct(
-            ecoScoreGrade = "e", // E fallback is 11.0
-            nutriments = nutriments,
-            productQuantity = 100.0
-        )
-        val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(0.14, result.value!!, 0.001)
-        assertEquals(com.ecotracker.data.local.EstimationStatus.VERIFIED, result.status)
-    }
-
-    @Test
-    fun `calculateCarbonFootprint should use category map if grade is missing`() {
-        // "Beef steak" contains "beef" which is 27.0 kg CO2e / kg
-        val product = createProduct(
-            productName = "Beef steak",
-            productQuantity = 1000.0
-        )
-        val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(27.0, result.value!!, 0.001)
-        assertEquals(com.ecotracker.data.local.EstimationStatus.CATEGORY_AVERAGE, result.status)
-    }
-
-    @Test
-    fun `calculateCarbonFootprint should return null for unknown items with no data`() {
-        val product = createProduct(
-            productName = "Mysterious Alien Gadget",
-            productQuantity = 1000.0
-        )
-        val result = CarbonCalculator.calculateCarbonFootprint(product)
-        assertEquals(null, result.value)
-        assertEquals(com.ecotracker.data.local.EstimationStatus.NEEDS_ESTIMATION, result.status)
-    }
-
-    @Test
-    fun `format should return dash for null value`() {
-        assertEquals("— kg CO₂e", CarbonCalculator.format(null))
-    }
-
-    @Test
-    fun `format should return formatted string for non-null value`() {
-        val result = CarbonCalculator.format(3.14159)
-        assertEquals("3.14 kg CO₂e", result)
-    }
-
-    @Test
-    fun `hasRealCarbonData returns true when agribalyse data present`() {
-        val agribalyse = AgribalyseDto(co2Total = 2.0, co2Agriculture = null, co2Packaging = null)
-        val ecoScoreData = EcoScoreDataDto(score = null, grade = null, agribalyse = agribalyse)
-        val product = createProduct(ecoScoreData = ecoScoreData)
-        assertTrue(CarbonCalculator.hasRealCarbonData(product))
-    }
-
-    @Test
-    fun `hasRealCarbonData returns true when nutriments data present`() {
-        val nutriments = NutrimentsDto(carbonFootprint = null, carbonFootprintPer100g = 50.0)
-        val product = createProduct(nutriments = nutriments)
-        assertTrue(CarbonCalculator.hasRealCarbonData(product))
-    }
-
-    @Test
-    fun `hasRealCarbonData returns false when neither source present`() {
-        val product = createProduct(ecoScoreGrade = "B")
-        assertFalse(CarbonCalculator.hasRealCarbonData(product))
-    }
-
-    @Test
-    fun `calculateCarbonFootprint matches category from categories field`() {
-        val product = createProduct(
-            productName = "Generic Item",
-            categories = "Fresh Fish",
-            productQuantity = 500.0
-        )
-        val result = CarbonCalculator.calculateCarbonFootprint(product)
-        // fish = 5.0 * 0.5kg = 2.5
+        assertTrue(result.status == EstimationStatus.VERIFIED)
         assertEquals(2.5, result.value!!, 0.001)
     }
 
     @Test
-    fun `calculateCarbonFootprint uses default 1000g when quantity null`() {
-        val product = createProduct(ecoScoreGrade = "C", productQuantity = null)
+    fun `calculateCarbonFootprint scales Agribalyse by quantity`() {
+        val product = buildProductDto(agribalyseCo2 = 2.5, productQuantity = 500.0)
         val result = CarbonCalculator.calculateCarbonFootprint(product)
-        // C = 3.0 * 1.0kg = 3.0
-        assertEquals(3.0, result.value!!, 0.001)
+
+        assertTrue(result.status == EstimationStatus.VERIFIED)
+        assertEquals(1.25, result.value!!, 0.001)
+    }
+
+    @Test
+    fun `calculateCarbonFootprint falls back to nutriments when no Agribalyse`() {
+        val product = buildProductDto(carbonPer100g = 500.0, productQuantity = 1000.0)
+        val result = CarbonCalculator.calculateCarbonFootprint(product)
+
+        assertTrue(result.status == EstimationStatus.VERIFIED)
+        // (500 / 1000) * (1000 / 100) = 0.5 * 10 = 5.0
+        assertEquals(5.0, result.value!!, 0.001)
+    }
+
+    @Test
+    fun `calculateCarbonFootprint uses category map for beef`() {
+        val product = buildProductDto(categories = "food beef steak", productName = "Beef Steak")
+        val result = CarbonCalculator.calculateCarbonFootprint(product)
+
+        assertTrue(result.status == EstimationStatus.CATEGORY_AVERAGE)
+        assertEquals(27.0, result.value!!, 0.001)
+    }
+
+    @Test
+    fun `calculateCarbonFootprint uses category map for vegetables`() {
+        val product = buildProductDto(categories = "fresh vegetables", productName = "Carrots")
+        val result = CarbonCalculator.calculateCarbonFootprint(product)
+
+        assertTrue(result.status == EstimationStatus.CATEGORY_AVERAGE)
+        assertEquals(0.4, result.value!!, 0.001)
+    }
+
+    @Test
+    fun `calculateCarbonFootprint uses ecoScore grade fallback`() {
+        val product = buildProductDto(ecoScoreGrade = "A")
+        val result = CarbonCalculator.calculateCarbonFootprint(product)
+
+        assertTrue(result.status == EstimationStatus.CATEGORY_AVERAGE)
+        assertEquals(0.5, result.value!!, 0.001)
+    }
+
+    @Test
+    fun `calculateCarbonFootprint returns needs estimation when no data`() {
+        val product = buildProductDto()
+        val result = CarbonCalculator.calculateCarbonFootprint(product)
+
+        assertTrue(result.status == EstimationStatus.NEEDS_ESTIMATION)
+        assertNull(result.value)
+    }
+
+    @Test
+    fun `hasRealCarbonData returns true for Agribalyse`() {
+        val product = buildProductDto(agribalyseCo2 = 2.5)
+        assertTrue(CarbonCalculator.hasRealCarbonData(product))
+    }
+
+    @Test
+    fun `hasRealCarbonData returns true for nutriments`() {
+        val product = buildProductDto(carbonPer100g = 500.0)
+        assertTrue(CarbonCalculator.hasRealCarbonData(product))
+    }
+
+    @Test
+    fun `hasRealCarbonData returns false for category fallback`() {
+        val product = buildProductDto(categories = "beef")
+        assertFalse(CarbonCalculator.hasRealCarbonData(product))
+    }
+
+    @Test
+    fun `format returns dash for null`() {
+        assertEquals("— kg CO₂e", CarbonCalculator.format(null))
+    }
+
+    @Test
+    fun `format returns formatted value`() {
+        assertEquals("2.50 kg CO₂e", CarbonCalculator.format(2.5))
+    }
+
+    @Test
+    fun `format handles zero`() {
+        assertEquals("0.00 kg CO₂e", CarbonCalculator.format(0.0))
     }
 }

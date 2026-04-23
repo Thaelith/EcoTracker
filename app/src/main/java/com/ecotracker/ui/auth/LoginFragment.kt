@@ -10,13 +10,14 @@ import com.ecotracker.R
 import com.ecotracker.databinding.FragmentLoginBinding
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
-    private lateinit var auth: FirebaseAuth
+    @Inject lateinit var auth: FirebaseAuth
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,7 +30,6 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        auth = FirebaseAuth.getInstance()
 
         binding.tvGoToRegister.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_registerFragment)

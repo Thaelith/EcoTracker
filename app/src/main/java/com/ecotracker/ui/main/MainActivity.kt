@@ -11,7 +11,7 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.navigation.ui.navigateUp
 import android.content.Intent
 import com.ecotracker.R
-import com.ecotracker.data.repository.EcoTrackerRepository
+import com.ecotracker.data.repository.UserRepository
 import com.ecotracker.databinding.ActivityMainBinding
 import com.google.android.material.textview.MaterialTextView
 import com.ecotracker.ui.auth.AuthActivity
@@ -24,7 +24,7 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var repository: EcoTrackerRepository
+    lateinit var repository: UserRepository
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController

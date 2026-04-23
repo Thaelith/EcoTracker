@@ -3,7 +3,7 @@ package com.ecotracker.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecotracker.R
-import com.ecotracker.data.repository.EcoTrackerRepository
+import com.ecotracker.data.repository.UserRepository
 import com.ecotracker.utils.Badge
 import com.ecotracker.utils.GamificationEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +27,7 @@ data class ProfileUiState(
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val repository: EcoTrackerRepository
+    private val repository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())

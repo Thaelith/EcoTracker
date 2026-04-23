@@ -1,6 +1,5 @@
 package com.ecotracker.data.repository
 
-import android.content.SharedPreferences
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.CachedProductEntity
 import com.ecotracker.data.local.ScannedProduct
@@ -18,7 +17,7 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
-class EcoTrackerRepositoryTest {
+class ProductRepositoryTest {
 
     private lateinit var foodApi: OpenFoodFactsApiService
     private lateinit var beautyApi: OpenBeautyFactsApiService
@@ -27,8 +26,9 @@ class EcoTrackerRepositoryTest {
     private lateinit var auth: FirebaseAuth
     private lateinit var firebaseUser: FirebaseUser
     private lateinit var firestore: FirebaseFirestore
-    private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var repository: EcoTrackerRepository
+    private lateinit var userRepository: UserRepository
+    private lateinit var geminiService: GeminiCarbonService
+    private lateinit var repository: ProductRepository
 
     private val testBarcode = "3017620422003"
 
@@ -41,20 +41,21 @@ class EcoTrackerRepositoryTest {
         auth = mockk()
         firebaseUser = mockk()
         firestore = mockk()
-        sharedPreferences = mockk(relaxed = true)
+        userRepository = mockk(relaxed = true)
+        geminiService = mockk(relaxed = true)
 
         every { auth.currentUser } returns null
         every { firestore.collection(any()) } throws RuntimeException("Firestore disabled in unit test")
-        every { sharedPreferences.getString(any(), any()) } returns null
 
-        repository = EcoTrackerRepository(
+        repository = ProductRepository(
             foodApi,
             beautyApi,
             upcApi,
             dao,
             auth,
             firestore,
-            sharedPreferences
+            userRepository,
+            geminiService
         )
     }
 

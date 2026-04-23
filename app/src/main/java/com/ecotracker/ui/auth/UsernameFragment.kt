@@ -11,14 +11,15 @@ import com.ecotracker.utils.toast
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class UsernameFragment : Fragment() {
 
     private var _binding: FragmentUsernameBinding? = null
     private val binding get() = _binding!!
-    private lateinit var auth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
+    @Inject lateinit var auth: FirebaseAuth
+    @Inject lateinit var firestore: FirebaseFirestore
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -31,8 +32,6 @@ class UsernameFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        auth = FirebaseAuth.getInstance()
-        firestore = FirebaseFirestore.getInstance()
 
         binding.btnSave.setOnClickListener {
             clearError()

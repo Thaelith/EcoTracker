@@ -1,5 +1,6 @@
 package com.ecotracker.utils
 
+import com.ecotracker.R
 import com.ecotracker.data.local.EstimationStatus
 import com.ecotracker.data.local.ScannedProduct
 import org.junit.Assert.*
@@ -7,129 +8,177 @@ import org.junit.Test
 
 class GamificationEngineTest {
 
-    // -- Rank calculation -------------------------------------------------------
+    private fun buildProduct(
+        status: EstimationStatus = EstimationStatus.VERIFIED,
+        carbonFootprint: Double? = 2.0
+    ): ScannedProduct {
+        return ScannedProduct(
+            barcode = "123",
+            productName = "Test",
+            brand = "Brand",
+            categories = "",
+            imageUrl = "",
+            ecoScore = "B",
+            ecoScoreValue = 50,
+            carbonFootprint = carbonFootprint,
+            status = status
+        )
+    }
+
+    // ── Rank Tests ────────────────────────────────────────────────────────────
 
     @Test
-    fun `rank is Seedling when scanCount is 0`() {
+    fun `calculateRank returns seedling for 0 scans`() {
         val rank = GamificationEngine.calculateRank(0)
+        assertEquals(R.string.rank_seedling, rank.nameResId)
         assertEquals(0, rank.level)
         assertEquals(0, rank.percentage)
     }
 
     @Test
-    fun `rank is Sprout at scanCount 1`() {
+    fun `calculateRank returns sprout for 1 scan`() {
         val rank = GamificationEngine.calculateRank(1)
+        assertEquals(R.string.rank_sprout, rank.nameResId)
         assertEquals(1, rank.level)
         assertEquals(0, rank.percentage)
     }
 
     @Test
-    fun `rank is Sprout at scanCount 4 with 75 percent progress`() {
+    fun `calculateRank returns sprout for 4 scans`() {
         val rank = GamificationEngine.calculateRank(4)
+        assertEquals(R.string.rank_sprout, rank.nameResId)
         assertEquals(1, rank.level)
         assertEquals(75, rank.percentage)
     }
 
     @Test
-    fun `rank is Sapling at scanCount 5`() {
+    fun `calculateRank returns sapling for 5 scans`() {
         val rank = GamificationEngine.calculateRank(5)
+        assertEquals(R.string.rank_sapling, rank.nameResId)
         assertEquals(2, rank.level)
         assertEquals(0, rank.percentage)
     }
 
     @Test
-    fun `rank is Tree at scanCount 15`() {
+    fun `calculateRank returns sapling for 14 scans`() {
+        val rank = GamificationEngine.calculateRank(14)
+        assertEquals(R.string.rank_sapling, rank.nameResId)
+        assertEquals(2, rank.level)
+        assertEquals(90, rank.percentage)
+    }
+
+    @Test
+    fun `calculateRank returns tree for 15 scans`() {
         val rank = GamificationEngine.calculateRank(15)
+        assertEquals(R.string.rank_tree, rank.nameResId)
         assertEquals(3, rank.level)
         assertEquals(0, rank.percentage)
     }
 
     @Test
-    fun `rank is Forest Guardian at scanCount 30`() {
+    fun `calculateRank returns tree for 29 scans`() {
+        val rank = GamificationEngine.calculateRank(29)
+        assertEquals(R.string.rank_tree, rank.nameResId)
+        assertEquals(3, rank.level)
+        assertEquals(93, rank.percentage)
+    }
+
+    @Test
+    fun `calculateRank returns forest guardian for 30 scans`() {
         val rank = GamificationEngine.calculateRank(30)
+        assertEquals(R.string.rank_forest_guardian, rank.nameResId)
         assertEquals(4, rank.level)
         assertEquals(100, rank.percentage)
     }
 
     @Test
-    fun `rank is Forest Guardian at scanCount above 30`() {
-        val rank = GamificationEngine.calculateRank(999)
+    fun `calculateRank returns forest guardian for 100 scans`() {
+        val rank = GamificationEngine.calculateRank(100)
+        assertEquals(R.string.rank_forest_guardian, rank.nameResId)
         assertEquals(4, rank.level)
         assertEquals(100, rank.percentage)
     }
 
-    // -- Badge calculations -----------------------------------------------------
-
-    private fun makeProduct(
-        barcode: String = "0000",
-        status: EstimationStatus = EstimationStatus.CATEGORY_AVERAGE,
-        carbonFootprint: Double? = null
-    ) = ScannedProduct(
-        barcode = barcode,
-        productName = "Test",
-        brand = "Test",
-        categories = "",
-        imageUrl = "",
-        ecoScore = "N/A",
-        ecoScoreValue = 0,
-        carbonFootprint = carbonFootprint,
-        status = status
-    )
+    // ── Badge Tests ───────────────────────────────────────────────────────────
 
     @Test
-    fun `no badges unlocked with empty list`() {
+    fun `getBadges returns all locked for empty list`() {
         val badges = GamificationEngine.getBadges(emptyList())
-        val unlocked = badges.filter { it.isUnlocked }
-        assertTrue(unlocked.isEmpty())
+
+        assertEquals(4, badges.size)
+        assertFalse(badges[0].isUnlocked) // first_seed
+        assertFalse(badges[1].isUnlocked) // eco_expert
+        assertFalse(badges[2].isUnlocked) // verified_scout
+        assertFalse(badges[3].isUnlocked) // carbon_hero
     }
 
     @Test
-    fun `first_seed badge unlocked with 1 scan`() {
-        val badges = GamificationEngine.getBadges(listOf(makeProduct()))
-        val firstSeed = badges.find { it.id == "first_seed" }
-        assertNotNull(firstSeed)
-        assertTrue(firstSeed!!.isUnlocked)
+    fun `getBadges unlocks first_seed with one product`() {
+        val badges = GamificationEngine.getBadges(listOf(buildProduct()))
+
+        assertTrue(badges[0].isUnlocked) // first_seed
+        assertFalse(badges[1].isUnlocked) // eco_expert (needs 5)
     }
 
     @Test
-    fun `eco_expert badge unlocked with 5 scans`() {
-        val products = (1..5).map { makeProduct(barcode = it.toString()) }
+    fun `getBadges unlocks eco_expert with 5 products`() {
+        val products = List(5) { buildProduct() }
         val badges = GamificationEngine.getBadges(products)
-        val ecoExpert = badges.find { it.id == "eco_expert" }
-        assertNotNull(ecoExpert)
-        assertTrue(ecoExpert!!.isUnlocked)
+
+        assertTrue(badges[1].isUnlocked) // eco_expert
     }
 
     @Test
-    fun `eco_expert badge locked with 4 scans`() {
-        val products = (1..4).map { makeProduct(barcode = it.toString()) }
+    fun `getBadges unlocks verified_scout with verified product`() {
+        val products = listOf(buildProduct(status = EstimationStatus.VERIFIED))
         val badges = GamificationEngine.getBadges(products)
-        val ecoExpert = badges.find { it.id == "eco_expert" }
-        assertNotNull(ecoExpert)
-        assertFalse(ecoExpert!!.isUnlocked)
+
+        assertTrue(badges[2].isUnlocked) // verified_scout
     }
 
     @Test
-    fun `verified_scout badge unlocked when a product is VERIFIED`() {
-        val products = listOf(makeProduct(status = EstimationStatus.VERIFIED))
+    fun `getBadges does not unlock verified_scout with AI estimated`() {
+        val products = listOf(buildProduct(status = EstimationStatus.AI_ESTIMATED))
         val badges = GamificationEngine.getBadges(products)
-        val verifiedScout = badges.find { it.id == "verified_scout" }
-        assertTrue(verifiedScout!!.isUnlocked)
+
+        assertFalse(badges[2].isUnlocked) // verified_scout
     }
 
     @Test
-    fun `carbon_hero badge unlocked when a product has carbon below 1`() {
-        val products = listOf(makeProduct(carbonFootprint = 0.5))
+    fun `getBadges unlocks carbon_hero with low carbon product`() {
+        val products = listOf(buildProduct(carbonFootprint = 0.5))
         val badges = GamificationEngine.getBadges(products)
-        val carbonHero = badges.find { it.id == "carbon_hero" }
-        assertTrue(carbonHero!!.isUnlocked)
+
+        assertTrue(badges[3].isUnlocked) // carbon_hero
     }
 
     @Test
-    fun `carbon_hero badge locked when carbon is exactly 1`() {
-        val products = listOf(makeProduct(carbonFootprint = 1.0))
+    fun `getBadges does not unlock carbon_hero with high carbon product`() {
+        val products = listOf(buildProduct(carbonFootprint = 2.0))
         val badges = GamificationEngine.getBadges(products)
-        val carbonHero = badges.find { it.id == "carbon_hero" }
-        assertFalse(carbonHero!!.isUnlocked)
+
+        assertFalse(badges[3].isUnlocked) // carbon_hero
+    }
+
+    @Test
+    fun `getBadges does not unlock carbon_hero with null carbon`() {
+        val products = listOf(buildProduct(carbonFootprint = null))
+        val badges = GamificationEngine.getBadges(products)
+
+        assertFalse(badges[3].isUnlocked) // carbon_hero
+    }
+
+    @Test
+    fun `getBadges with explicit params unlocks all`() {
+        val badges = GamificationEngine.getBadges(
+            scanCount = 10,
+            hasVerifiedProduct = true,
+            hasLowCarbonProduct = true
+        )
+
+        assertTrue(badges[0].isUnlocked) // first_seed
+        assertTrue(badges[1].isUnlocked) // eco_expert
+        assertTrue(badges[2].isUnlocked) // verified_scout
+        assertTrue(badges[3].isUnlocked) // carbon_hero
     }
 }

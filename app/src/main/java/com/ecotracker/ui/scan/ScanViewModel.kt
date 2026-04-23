@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecotracker.data.local.ScannedProduct
-import com.ecotracker.data.repository.EcoTrackerRepository
+import com.ecotracker.data.repository.ProductRepository
 import com.ecotracker.utils.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ScanViewModel @Inject constructor(
-    private val repository: EcoTrackerRepository
+    private val repository: ProductRepository
 ) : ViewModel() {
 
     private val _scanState = MutableLiveData<Resource<ScannedProduct>>()

@@ -4,7 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import com.ecotracker.data.local.ScannedProduct
-import com.ecotracker.data.repository.EcoTrackerRepository
+import com.ecotracker.data.repository.ProductRepository
+import com.ecotracker.data.repository.UserRepository
 import com.ecotracker.utils.startOfDay
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -23,19 +24,20 @@ data class WeeklyChartBar(
 
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
-    private val repository: EcoTrackerRepository
+    private val productRepository: ProductRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
-    val totalScannedCount: LiveData<Int> = repository.getTotalScannedCount().asLiveData()
+    val totalScannedCount: LiveData<Int> = userRepository.getTotalScannedCount().asLiveData()
 
     val totalCarbonToday: LiveData<Double?> =
-        repository.getTotalCarbonSince(startOfDay(0)).asLiveData()
+        userRepository.getTotalCarbonSince(startOfDay(0)).asLiveData()
 
     val totalCarbonThisWeek: LiveData<Double?> =
-        repository.getTotalCarbonSince(startOfDay(6)).asLiveData()
+        userRepository.getTotalCarbonSince(startOfDay(6)).asLiveData()
 
     val weeklyChart: LiveData<List<WeeklyChartBar>> =
-        repository.getProductsSince(startOfDay(6))
+        productRepository.getProductsSince(startOfDay(6))
             .map(::buildWeeklyChart)
             .distinctUntilChanged()
             .flowOn(Dispatchers.Default)
